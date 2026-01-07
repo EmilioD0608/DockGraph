@@ -1,0 +1,194 @@
+:host {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+    background-color: #121214;
+    /* Match editor background */
+}
+
+.canvas-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+
+    /* The requested Dot Grid */
+    background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.08) 1px, transparent 0);
+    background-size: 24px 24px;
+    will-change: background-position;
+}
+
+.canvas-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    overflow: visible;
+    z-index: 1;
+    will-change: transform;
+}
+
+/* Connections Layer */
+/* Connections Layer */
+.connections-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    /* Must have non-zero size for some browsers to render overflow content */
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+    overflow: visible;
+    z-index: 0;
+}
+
+@keyframes dash-flow {
+    to {
+        stroke-dashoffset: -30;
+    }
+}
+
+.connection-line {
+    animation: dash-flow 2s linear infinite;
+    opacity: 0.8;
+}
+
+/* Node Styles */
+.node-card {
+    position: absolute;
+    width: 200px;
+    /* Fixed width for calculation simplicity */
+    background: rgba(30, 30, 32, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    backdrop-filter: blur(10px);
+    transition: box-shadow 0.2s;
+    z-index: 1;
+    overflow: visible;
+}
+
+/* ... skipped strict match ... */
+
+.sockets-column.outputs .socket-item {
+    margin-right: -29px;
+}
+
+/* Specific Types */
+.node-volume {
+    width: 180px;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.node-network {
+    width: 180px;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.node-card:hover {
+    box-shadow: 0 0 0 1px rgba(1, 135, 144, 0.5), 0 8px 24px rgba(0, 0, 0, 0.4);
+    border-color: rgba(1, 135, 144, 0.5);
+    z-index: 10;
+}
+
+.node-header {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px 8px 0 0;
+    border-top: 3px solid transparent;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.node-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--color-primary, #018790);
+}
+
+.node-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.node-body {
+    padding: 12px;
+    min-height: 40px;
+    font-size: 0.85rem;
+    color: #a1a1aa;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    overflow: visible;
+}
+
+.sockets-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.socket-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 24px;
+    cursor: crosshair;
+}
+
+.socket-label {
+    font-size: 0.75rem;
+    color: #d4d4d8;
+}
+
+.socket-point {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #777;
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    transition: transform 0.1s;
+}
+
+.socket-item:hover .socket-point {
+    transform: scale(1.2);
+    border-color: white;
+}
+
+/* Alignment */
+.sockets-column.inputs {
+    align-items: flex-start;
+}
+
+.sockets-column.outputs {
+    align-items: flex-end;
+}
+
+.sockets-column.inputs .socket-item {
+    flex-direction: row;
+    margin-left: -25px;
+}
+
+/* Pull dot to edge (12px padding + 13px extra) */
+
+.sockets-column.outputs .socket-item {
+    margin-right: -29px;
+}

@@ -1,0 +1,257 @@
+<div class="editor-panel glass-panel">
+    <div class="editor-header">
+        <h3>Editar Nodo</h3>
+        <button class="icon-btn" (click)="close.emit()">
+            <lucide-icon [img]="icons.close" class="icon"></lucide-icon>
+        </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="editor-content">
+
+        <div class="form-group">
+            <label>Nombre {{ node?.type === 'service' ? 'del Servicio' : (node?.type === 'volume' ? 'del Volumen' : 'de
+                la Red') }}</label>
+            <input type="text" formControlName="label" placeholder="Nombre...">
+        </div>
+
+        <ng-container *ngIf="node?.type === 'service'">
+            <!-- Image / Build Toggle -->
+            <div class="form-group-checkbox">
+                <label>
+                    <input type="checkbox" formControlName="useBuild">
+                    Usar Build Context (Dockerfile)
+                </label>
+            </div>
+
+            <div *ngIf="form.get('useBuild')?.value" class="form-group">
+                <label>Build Context</label>
+                <input type="text" formControlName="buildContext" placeholder="./backend">
+                <label class="sub-label">Dockerfile (Opcional)</label>
+                <input type="text" formControlName="buildDockerfile" placeholder="Dockerfile.dev">
+            </div>
+
+            <div *ngIf="!form.get('useBuild')?.value" class="form-group">
+                <label>Imagen Docker</label>
+                <div class="combobox-container">
+                    <input type="text" formControlName="image" placeholder="ej: node:18-alpine"
+                        (input)="onImageInput($event)" (focus)="toggleImageDropdown()" (blur)="closeImageDropdown()"
+                        autocomplete="off">
+
+                    <button type="button" class="combo-toggle" (click)="toggleImageDropdown()">
+                        <lucide-icon [img]="icons.chevron" class="icon-xs"></lucide-icon>
+                    </button>
+
+                    <div class="combo-dropdown glass-panel" *ngIf="showImageDropdown()">
+                        <div class="combo-item" *ngFor="let img of filteredImages()" (click)="selectImage(img)">
+                            {{ img }}
+                        </div>
+                        <div class="combo-item empty" *ngIf="filteredImages().length === 0">
+                            No hay coincidencias
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Nombre del Contenedor</label>
+                <input type="text" formControlName="containerName" placeholder="my-custom-container">
+            </div>
+
+            <div class="form-group">
+                <label>Puertos (Host:Container)</label>
+                <input type="text" formControlName="ports" placeholder="ej: 3000:3000, 80:80">
+            </div>
+
+            <!-- Volume MountPoints (Dynamic based on connections) -->
+            <div class="form-section" *ngIf="volumeMountsList.length > 0">
+                <label class="section-label">Montaje de Volúmenes</label>
+                <div class="env-list">
+                    <div class="env-row" *ngFor="let mount of volumeMountsList; let i = index">
+                        <div class="static-label">{{ mount.volumeLabel }}</div>
+                        <span class="arrow">→</span>
+                        <input type="text" [value]="mount.target" (input)="updateMountTarget(i, $event)"
+                            placeholder="/app/data">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resources Accordion -->
+            <div class="form-section">
+                <div class="section-header" (click)="toggleResources()" style="cursor: pointer;">
+                    <label>Recursos (Deploy)</label>
+                    <lucide-icon [img]="icons.chevron" [class.rotated]="isResourcesExpanded()"
+                        class="icon-xs"></lucide-icon>
+                </div>
+                <div class="ipam-content" *ngIf="isResourcesExpanded()">
+                    <div class="form-group">
+                        <label>CPU Limit</label>
+                        <input type="text" formControlName="cpuLimit" placeholder="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label>Memoria Limit</label>
+                        <input type="text" formControlName="memLimit" placeholder="512M">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Healthcheck -->
+            <div class="form-section">
+                <div class="section-header" (click)="toggleHealthcheck()" style="cursor: pointer;">
+                    <label>Healthcheck</label>
+                    <lucide-icon [img]="icons.chevron" [class.rotated]="isHealthcheckExpanded()"
+                        class="icon-xs"></lucide-icon>
+                </div>
+
+                <div class="ipam-content" *ngIf="isHealthcheckExpanded()">
+                    <div class="form-group">
+                        <label>Test Command (CMD-SHELL)</label>
+                        <input type="text" formControlName="hcTest" placeholder="curl -f http://localhost/ || exit 1">
+                    </div>
+                    <div class="form-row" style="display: flex; gap: 8px;">
+                        <div class="form-group half" style="flex: 1;">
+                            <label>Interval</label>
+                            <input type="text" formControlName="hcInterval" placeholder="30s">
+                        </div>
+                        <div class="form-group half" style="flex: 1;">
+                            <label>Timeout</label>
+                            <input type="text" formControlName="hcTimeout" placeholder="10s">
+                        </div>
+                    </div>
+                    <div class="form-row" style="display: flex; gap: 8px;">
+                        <div class="form-group half" style="flex: 1;">
+                            <label>Retries</label>
+                            <input type="number" formControlName="hcRetries" placeholder="3">
+                        </div>
+                        <div class="form-group half" style="flex: 1;">
+                            <label>Start Period</label>
+                            <input type="text" formControlName="hcStartPeriod" placeholder="0s">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Restart Policy</label>
+                <select formControlName="restart">
+                    <option value="no">no</option>
+                    <option value="always">always</option>
+                    <option value="on-failure">on-failure</option>
+                    <option value="unless-stopped">unless-stopped</option>
+                </select>
+            </div>
+
+            <div class="form-section">
+                <div class="section-header">
+                    <label>Variables de Entorno</label>
+                    <button type="button" class="btn-small" (click)="addEnvVar()">+ Add</button>
+                </div>
+
+                <div class="env-list">
+                    <div *ngFor="let env of envVars; let i = index" class="env-row">
+                        <input type="text" [value]="env.key" (input)="updateEnvKey(i, $event)" placeholder="KEY">
+                        <span class="separator">=</span>
+                        <input type="text" [value]="env.value" (input)="updateEnvValue(i, $event)" placeholder="VALUE">
+                        <button type="button" class="icon-btn-danger" (click)="removeEnvVar(i)">×</button>
+                    </div>
+                </div>
+            </div>
+        </ng-container>
+
+        <ng-container *ngIf="node?.type === 'network'">
+            <div class="form-group-checkbox">
+                <label>
+                    <input type="checkbox" formControlName="external">
+                    External Network
+                </label>
+                <small class="hint">Use existing network outside compose</small>
+            </div>
+
+            <ng-container *ngIf="!form.get('external')?.value">
+                <div class="form-group">
+                    <label>Driver</label>
+                    <select formControlName="driver">
+                        <option value="bridge">bridge</option>
+                        <option value="host">host</option>
+                        <option value="overlay">overlay</option>
+                        <option value="none">none</option>
+                    </select>
+                </div>
+
+                <div class="form-group-checkbox">
+                    <label>
+                        <input type="checkbox" formControlName="internal">
+                        Internal Only (No Internet)
+                    </label>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-header" (click)="toggleIpam()" style="cursor: pointer;">
+                        <label>IPAM Config</label>
+                        <lucide-icon [img]="icons.chevron" [class.rotated]="isIpamExpanded()"
+                            class="icon-xs"></lucide-icon>
+                    </div>
+                    <div class="ipam-content" *ngIf="isIpamExpanded()">
+                        <div class="form-group">
+                            <label>Subnet</label>
+                            <input type="text" formControlName="subnet" placeholder="e.g. 172.16.238.0/24">
+                        </div>
+                        <div class="form-group">
+                            <label>Gateway</label>
+                            <input type="text" formControlName="gateway" placeholder="e.g. 172.16.238.1">
+                        </div>
+                    </div>
+                </div>
+            </ng-container>
+        </ng-container>
+
+        <ng-container *ngIf="node?.type === 'volume'">
+            <div class="form-group-checkbox">
+                <label>
+                    <input type="checkbox" formControlName="external">
+                    External Volume
+                </label>
+            </div>
+
+            <div class="form-group" *ngIf="form.get('external')?.value">
+                <label>Volume Name (on Host)</label>
+                <input type="text" formControlName="externalName" placeholder="e.g. existing-data-vol">
+            </div>
+
+            <ng-container *ngIf="!form.get('external')?.value">
+                <div class="form-group">
+                    <label>Driver</label>
+                    <select formControlName="driver">
+                        <option value="local">local</option>
+                        <option value="vids">vids</option>
+                        <option value="rexray/ebs">rexray/ebs</option>
+                    </select>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-header">
+                        <label>Driver Options</label>
+                        <button type="button" class="btn-small" (click)="addDriverOpt()">+ Add</button>
+                    </div>
+                    <div class="env-list">
+                        <div *ngFor="let opt of driverOptsList; let i = index" class="env-row">
+                            <input type="text" [value]="opt.key" (input)="updateDriverOptKey(i, $event)"
+                                placeholder="KEY">
+                            <span class="separator">=</span>
+                            <input type="text" [value]="opt.value" (input)="updateDriverOptValue(i, $event)"
+                                placeholder="VALUE">
+                            <button type="button" class="icon-btn-danger" (click)="removeDriverOpt(i)">×</button>
+                        </div>
+                    </div>
+                </div>
+            </ng-container>
+        </ng-container>
+
+        <div class="editor-footer">
+            <button type="submit" class="btn-primary">
+                <lucide-icon [img]="icons.save" class="icon-sm"></lucide-icon>
+                Guardar
+            </button>
+        </div>
+
+    </form>
+</div>

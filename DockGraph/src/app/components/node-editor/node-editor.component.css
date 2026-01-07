@@ -1,0 +1,314 @@
+.editor-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 350px;
+    height: 100vh;
+    height: 100dvh;
+    background: rgba(24, 24, 27, 0.95);
+    backdrop-filter: blur(20px);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    z-index: 200;
+    animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.editor-header {
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.editor-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+}
+
+.editor-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+label {
+    font-size: 0.85rem;
+    color: #a1a1aa;
+    font-weight: 500;
+}
+
+input,
+select {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.6rem;
+    border-radius: 6px;
+    color: white;
+    font-family: inherit;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+input:focus,
+select:focus {
+    border-color: var(--color-primary, #018790);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.btn-small {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.btn-small:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.env-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.env-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.env-row input {
+    width: 0;
+    flex: 1;
+    font-size: 0.8rem;
+    padding: 0.4rem;
+}
+
+.separator {
+    color: #555;
+}
+
+.icon-btn-danger {
+    background: transparent;
+    border: none;
+    color: #777;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.icon-btn-danger:hover {
+    color: #ef4444;
+}
+
+.editor-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn-primary {
+    width: 100%;
+    background: var(--color-primary, #018790);
+    color: white;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover {
+    background: #029aa5;
+}
+
+.icon {
+    width: 20px;
+    height: 20px;
+    color: #a1a1aa;
+}
+
+.icon-sm {
+    width: 16px;
+    height: 16px;
+}
+
+.icon-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.icon-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ComboBox Styles */
+.combobox-container {
+    position: relative;
+    width: 100%;
+}
+
+.combobox-container input {
+    width: 100%;
+    padding-right: 32px;
+    box-sizing: border-box;
+}
+
+.combo-toggle {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: #a1a1aa;
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.combo-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.combo-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #1f1f22;
+    /* Fallback */
+    background: rgba(31, 31, 34, 0.98);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+}
+
+.combo-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #cbd5e1;
+    border-radius: 4px;
+    transition: background 0.1s;
+}
+
+.combo-item:hover {
+    background: var(--color-primary, #018790);
+    color: white;
+}
+
+.combo-item.empty {
+    color: #64748b;
+    font-style: italic;
+    cursor: default;
+}
+
+.combo-item.empty:hover {
+    background: transparent;
+    color: #64748b;
+}
+
+.icon-xs {
+    width: 14px;
+    height: 14px;
+}
+/* Checkbox Styles */
+.form-group-checkbox {
+    margin-bottom: 0.5rem;
+}
+
+.form-group-checkbox label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: #cbd5e1;
+    font-weight: 500;
+}
+
+.form-group-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--color-primary, #018790);
+    cursor: pointer;
+}
+
+.hint {
+    display: block;
+    margin-top: 4px;
+    margin-left: 24px;
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+/* Accordion / Collapse Styles */
+.rotated {
+    transform: rotate(180deg);
+    transition: transform 0.2s;
+}
+
+.ipam-content {
+    margin-top: 0.5rem;
+    padding-left: 1rem;
+    border-left: 2px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}

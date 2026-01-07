@@ -1,0 +1,58 @@
+<div class="context-menu glass-panel" [style.left.px]="x" [style.top.px]="y" (click)="$event.stopPropagation()">
+
+    <!-- Main Menu -->
+    <ng-container *ngIf="view() === 'main'">
+        <button class="menu-item" (click)="setView('add-node')">
+            <lucide-icon [img]="icons.plus" class="icon"></lucide-icon>
+            <span>Nuevo nodo</span>
+            <lucide-icon [img]="icons.forward" class="icon-sm ml-auto"></lucide-icon>
+        </button>
+    </ng-container>
+
+    <!-- Add Node Menu -->
+    <ng-container *ngIf="view() === 'add-node'">
+        <div class="menu-header">
+            <button class="icon-btn" (click)="setView('main')">
+                <lucide-icon [img]="icons.back" class="icon-sm"></lucide-icon>
+            </button>
+            <span class="header-title">Añadir Nodo</span>
+        </div>
+
+        <div class="search-box">
+            <lucide-icon [img]="icons.search" class="search-icon"></lucide-icon>
+            <input type="text" placeholder="Buscar..." (input)="onSearch($event)" autofocus>
+        </div>
+
+        <div class="scroll-list">
+            <button class="menu-item" (click)="handleNestedAction('add-node:service')"
+                *ngIf="'servicio service'.includes(searchQuery().toLowerCase()) || searchQuery() === ''">
+                <lucide-icon [img]="icons.server" class="icon"></lucide-icon>
+                <span>Servicio</span>
+            </button>
+
+            <button class="menu-item" (click)="handleNestedAction('add-node:volume')"
+                *ngIf="'volumen volume'.includes(searchQuery().toLowerCase()) || searchQuery() === ''">
+                <lucide-icon [img]="icons.db" class="icon"></lucide-icon>
+                <span>Volumen</span>
+            </button>
+
+            <button class="menu-item" (click)="handleNestedAction('add-node:network')"
+                *ngIf="'red network'.includes(searchQuery().toLowerCase()) || searchQuery() === ''">
+                <lucide-icon [img]="icons.network" class="icon"></lucide-icon>
+                <span>Red</span>
+            </button>
+        </div>
+    </ng-container>
+
+    <!-- Node Context Menu -->
+    <ng-container *ngIf="view() === 'node-context'">
+        <button class="menu-item" (click)="onAction('edit-node')">
+            <lucide-icon [img]="icons.edit" class="icon"></lucide-icon>
+            <span>Editar</span>
+        </button>
+        <button class="menu-item delete-item" (click)="onAction('delete-node')">
+            <lucide-icon [img]="icons.trash" class="icon"></lucide-icon>
+            <span>Eliminar</span>
+        </button>
+    </ng-container>
+</div>

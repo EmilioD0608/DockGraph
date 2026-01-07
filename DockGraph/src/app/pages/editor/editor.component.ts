@@ -1,0 +1,717 @@
+import { Component, signal, HostListener, ViewChild, effect, computed, ElementRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { LucideAngularModule, Download, Upload } from 'lucide-angular';
+import * as yaml from 'js-yaml';
+
+import { Canvas } from '../../components/canvas/canvas';
+import { ContextMenuComponent } from '../../components/context-menu/context-menu.component';
+import { NodeEditorComponent } from '../../components/node-editor/node-editor.component';
+import { DockerNodeData, DockConnection, Socket } from '../../models/docker-node';
+
+@Component({
+    selector: 'app-editor',
+    standalone: true,
+    imports: [CommonModule, LucideAngularModule, Canvas, ContextMenuComponent, NodeEditorComponent],
+    templateUrl: './editor.component.html',
+    styleUrl: './editor.component.css'
+})
+export class EditorComponent {
+    @ViewChild(Canvas) canvasRef!: Canvas;
+
+    readonly icons = { download: Download, upload: Upload };
+
+    isMenuOpen = signal(false);
+    isImportModalOpen = signal(false);
+    isDarkMode = signal(true);
+
+    nodes = signal<DockerNodeData[]>([]);
+    connections = signal<DockConnection[]>([]);
+
+    editingNode = signal<DockerNodeData | null>(null);
+
+    // Computed: Connected volumes for the currently editing node
+    connectedVolumes = computed(() => {
+        const node = this.editingNode();
+        if (!node || node.type !== 'service') return [];
+
+        return this.connections()
+            .filter(c => c.sourceNodeId === node.id)
+            .map(c => this.nodes().find(n => n.id === c.targetNodeId))
+            .filter((n): n is DockerNodeData => !!n && n.type === 'volume')
+            .map(v => ({ id: v.id, label: v.label }));
+    });
+
+    contextMenu = signal<{ x: number, y: number, visible: boolean, view: 'main' | 'add-node' | 'node-context', data?: any }>({
+        x: 0, y: 0, visible: false, view: 'main'
+    });
+
+    constructor() {
+        const savedNodes = localStorage.getItem('dockgraph-nodes');
+        const savedConns = localStorage.getItem('dockgraph-connections');
+
+        if (savedNodes) {
+            try { this.nodes.set(JSON.parse(savedNodes)); } catch (e) { console.error(e); }
+        }
+        if (savedConns) {
+            try { this.connections.set(JSON.parse(savedConns)); } catch (e) { console.error(e); }
+        }
+
+        effect(() => {
+            localStorage.setItem('dockgraph-nodes', JSON.stringify(this.nodes()));
+            localStorage.setItem('dockgraph-connections', JSON.stringify(this.connections()));
+        });
+    }
+
+    toggleMenu() {
+        this.isMenuOpen.update(value => !value);
+    }
+
+    toggleDarkMode() {
+        this.isDarkMode.update(value => !value);
+    }
+
+    @HostListener('contextmenu', ['$event'])
+    onRightClick(event: MouseEvent) {
+        event.preventDefault();
+        this.contextMenu.set({ x: event.clientX, y: event.clientY, visible: true, view: 'main' });
+    }
+
+    handleNodeContextMenu({ event, nodeId }: { event: MouseEvent, nodeId: string }) {
+        this.contextMenu.set({
+            x: event.clientX,
+            y: event.clientY,
+            visible: true,
+            view: 'node-context',
+            data: { nodeId }
+        });
+    }
+
+    @HostListener('document:click')
+    closeContextMenu() {
+        if (this.contextMenu().visible) {
+            this.contextMenu.update(prev => ({ ...prev, visible: false }));
+        }
+    }
+
+    handleContextMenuAction(action: string) {
+        const { x, y } = this.contextMenu();
+        const data = this.contextMenu().data;
+
+        if (action === 'add-node:service') {
+            this.addServiceNode(x, y);
+        }
+        else if (action === 'add-node:volume') {
+            this.addVolumeNode(x, y);
+        }
+        else if (action === 'add-node:network') {
+            this.addNetworkNode(x, y);
+        }
+        else if (action === 'delete-node') {
+            if (data?.nodeId) {
+                this.nodes.update(curr => curr.filter(n => n.id !== data.nodeId));
+                // Remove connections attached to this node
+                this.connections.update(curr => curr.filter(c => c.sourceNodeId !== data.nodeId && c.targetNodeId !== data.nodeId));
+            }
+        }
+        else if (action === 'edit-node') {
+            const node = this.nodes().find(n => n.id === data?.nodeId);
+            if (node) {
+                this.editingNode.set(node);
+            }
+        }
+    }
+
+    updateNode(updatedNode: DockerNodeData) {
+        this.nodes.update(curr => curr.map(n => n.id === updatedNode.id ? updatedNode : n));
+    }
+
+    handleConnectionCreate(conn: DockConnection) {
+        this.connections.update(curr => [...curr, conn]);
+    }
+
+    private getCanvasPoint(clientX: number, clientY: number) {
+        if (!this.canvasRef) return { x: 0, y: 0 };
+        const t = this.canvasRef.transform();
+        return {
+            x: (clientX - t.x) / t.scale,
+            y: (clientY - t.y) / t.scale
+        };
+    }
+
+    addServiceNode(cx: number, cy: number) {
+        const p = this.getCanvasPoint(cx, cy);
+        const newNode: DockerNodeData = {
+            id: crypto.randomUUID(), type: 'service', label: 'Service', x: p.x, y: p.y,
+            inputs: [
+                { id: crypto.randomUUID(), type: 'dependency', dir: 'in', label: 'Dep In' }
+            ],
+            outputs: [
+                { id: crypto.randomUUID(), type: 'dependency', dir: 'out', label: 'Dep Out' },
+                { id: crypto.randomUUID(), type: 'volume', dir: 'out', label: 'Vol Out' },
+                { id: crypto.randomUUID(), type: 'network', dir: 'out', label: 'Net Out' }
+            ],
+            config: { image: 'nginx:latest' }
+        };
+        this.nodes.update(curr => [...curr, newNode]);
+    }
+
+    addVolumeNode(cx: number, cy: number) {
+        const p = this.getCanvasPoint(cx, cy);
+        const newNode: DockerNodeData = {
+            id: crypto.randomUUID(), type: 'volume', label: 'Volume', x: p.x, y: p.y,
+            inputs: [
+                { id: crypto.randomUUID(), type: 'volume', dir: 'in', label: 'Mount' }
+            ],
+            outputs: [],
+            config: {}
+        };
+        this.nodes.update(curr => [...curr, newNode]);
+    }
+
+    addNetworkNode(cx: number, cy: number) {
+        const p = this.getCanvasPoint(cx, cy);
+        const newNode: DockerNodeData = {
+            id: crypto.randomUUID(), type: 'network', label: 'Network', x: p.x, y: p.y,
+            inputs: [
+                { id: crypto.randomUUID(), type: 'network', dir: 'in', label: 'Member' }
+            ],
+            outputs: [],
+            config: {}
+        };
+        this.nodes.update(curr => [...curr, newNode]);
+    }
+
+    closeEditor() {
+        this.editingNode.set(null);
+    }
+
+    saveNodeEditor(updatedNode: DockerNodeData) {
+        this.updateNode(updatedNode);
+        this.closeEditor();
+    }
+
+    exportYaml() {
+        const nodes = this.nodes();
+        const connections = this.connections();
+
+        // Map node.id -> unique, sanitized name
+        const nodeNameMap = new Map<string, string>();
+        const usedNames = new Set<string>();
+
+        // Helper to generate unique name
+        const getUniqueName = (baseName: string) => {
+            // Sanitize: lowercase, replace spaces/specials with underscores
+            let name = baseName.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+            if (!name) name = 'node';
+
+            let uniqueName = name;
+            let counter = 1;
+            while (usedNames.has(uniqueName)) {
+                uniqueName = `${name}_${counter}`;
+                counter++;
+            }
+            usedNames.add(uniqueName);
+            return uniqueName;
+        };
+
+        // 1. Build Name Map
+        nodes.forEach(node => {
+            const safeName = getUniqueName(node.label);
+            nodeNameMap.set(node.id, safeName);
+        });
+
+        const services: any = {};
+        const volumes: Set<string> = new Set();
+        const networks: Set<string> = new Set();
+
+        // 2. Initialize Structures
+        nodes.forEach(node => {
+            const name = nodeNameMap.get(node.id)!;
+
+            if (node.type === 'service') {
+                const svc: any = {
+                    restart: node.config.restart || 'no',
+                };
+
+                // Build vs Image
+                if (node.config.build) {
+                    svc.build = typeof node.config.build === 'string' ? node.config.build : { ...node.config.build };
+                } else {
+                    svc.image = node.config.image || 'nginx:latest';
+                }
+
+                // Optional Basic Fields
+                if (node.config.container_name) svc.container_name = node.config.container_name;
+                if (node.config.ports && node.config.ports.length > 0) svc.ports = [...node.config.ports];
+                if (node.config.environment && Object.keys(node.config.environment).length > 0) svc.environment = { ...node.config.environment };
+                // Explicit Volumes list (bind mounts)
+                if (node.config.volumes && node.config.volumes.length > 0) svc.volumes = [...node.config.volumes];
+
+                // Resources
+                if (node.config.deploy?.resources?.limits?.cpus || node.config.deploy?.resources?.limits?.memory) {
+                    svc.deploy = { resources: { limits: {} } };
+                    if (node.config.deploy.resources.limits.cpus) svc.deploy.resources.limits.cpus = node.config.deploy.resources.limits.cpus;
+                    if (node.config.deploy.resources.limits.memory) svc.deploy.resources.limits.memory = node.config.deploy.resources.limits.memory;
+                }
+
+                if (node.config.healthcheck) {
+                    svc.healthcheck = { ...node.config.healthcheck };
+                }
+
+                services[name] = svc;
+            } else if (node.type === 'volume') {
+                volumes.add(name);
+            } else if (node.type === 'network') {
+                networks.add(name);
+            }
+        });
+
+        // 3. Process Connections
+        connections.forEach(conn => {
+            const sourceName = nodeNameMap.get(conn.sourceNodeId);
+            const targetName = nodeNameMap.get(conn.targetNodeId);
+            const sourceNode = nodes.find(n => n.id === conn.sourceNodeId);
+            const targetNode = nodes.find(n => n.id === conn.targetNodeId);
+
+            if (!sourceName || !targetName || !sourceNode || !targetNode) return;
+
+            // Service -> Service (Depends On)
+            if (sourceNode.type === 'service' && targetNode.type === 'service') {
+                if (!services[sourceName].depends_on) services[sourceName].depends_on = [];
+                if (!services[sourceName].depends_on.includes(targetName)) {
+                    services[sourceName].depends_on.push(targetName);
+                }
+            }
+
+            // Service -> Volume
+            if (sourceNode.type === 'service' && targetNode.type === 'volume') {
+                if (!services[sourceName].volumes) services[sourceName].volumes = [];
+                // Check if already mounted
+                const hasMount = services[sourceName].volumes.some((v: string) => v.startsWith(targetName + ':'));
+
+                if (!hasMount) {
+                    // Use Dynamic Target Config from Service Node
+                    const targetPath = sourceNode.config.volumeMounts?.[targetNode.id] || '/app/data';
+                    services[sourceName].volumes.push(`${targetName}:${targetPath}`);
+                }
+            }
+
+            // Service -> Network
+            if (sourceNode.type === 'service' && targetNode.type === 'network') {
+                if (!services[sourceName].networks) services[sourceName].networks = [];
+                if (!services[sourceName].networks.includes(targetName)) {
+                    services[sourceName].networks.push(targetName);
+                }
+            }
+        });
+
+        // 4. Construct YAML
+        let yaml = 'version: "3.8"\n\n';
+
+        // Services
+        if (Object.keys(services).length > 0) {
+            yaml += 'services:\n';
+            for (const [name, svc] of Object.entries(services)) {
+                yaml += `  ${name}:\n`;
+                if ((svc as any).image) yaml += `    image: ${(svc as any).image}\n`;
+
+                // Build Support
+                if ((svc as any).build) {
+                    if (typeof (svc as any).build === 'string') {
+                        yaml += `    build: ${(svc as any).build}\n`;
+                    } else {
+                        yaml += `    build:\n`;
+                        yaml += `      context: ${(svc as any).build.context}\n`;
+                        if ((svc as any).build.dockerfile) yaml += `      dockerfile: ${(svc as any).build.dockerfile}\n`;
+                    }
+                }
+
+                if ((svc as any).container_name) yaml += `    container_name: ${(svc as any).container_name}\n`;
+
+                // Deploy Resources Support
+                if ((svc as any).deploy) {
+                    yaml += `    deploy:\n`;
+                    yaml += `      resources:\n`;
+                    yaml += `        limits:\n`;
+                    if ((svc as any).deploy.resources.limits.cpus) yaml += `          cpus: '${(svc as any).deploy.resources.limits.cpus}'\n`;
+                    if ((svc as any).deploy.resources.limits.memory) yaml += `          memory: ${(svc as any).deploy.resources.limits.memory}\n`;
+                }
+
+                // Healthcheck Support
+                if ((svc as any).healthcheck) {
+                    yaml += `    healthcheck:\n`;
+                    // Check if test is array or string, but we saved it as array ["CMD-SHELL", "cmd"]
+                    const testCmd = (svc as any).healthcheck.test;
+                    if (Array.isArray(testCmd)) {
+                        yaml += `      test: ["${testCmd[0]}", "${testCmd[1]}"]\n`;
+                    } else {
+                        yaml += `      test: ${testCmd}\n`;
+                    }
+                    yaml += `      interval: ${(svc as any).healthcheck.interval}\n`;
+                    yaml += `      timeout: ${(svc as any).healthcheck.timeout}\n`;
+                    yaml += `      retries: ${(svc as any).healthcheck.retries}\n`;
+                    if ((svc as any).healthcheck.start_period) yaml += `      start_period: ${(svc as any).healthcheck.start_period}\n`;
+                }
+
+                if ((svc as any).restart) yaml += `    restart: ${(svc as any).restart}\n`;
+
+                if ((svc as any).ports) {
+                    yaml += `    ports:\n`;
+                    (svc as any).ports.forEach((p: string) => yaml += `      - "${p}"\n`);
+                }
+                if ((svc as any).environment) {
+                    yaml += `    environment:\n`;
+                    for (const [k, v] of Object.entries((svc as any).environment)) {
+                        yaml += `      ${k}: "${v}"\n`;
+                    }
+                }
+                if ((svc as any).volumes) {
+                    yaml += `    volumes:\n`;
+                    (svc as any).volumes.forEach((v: string) => yaml += `      - ${v}\n`);
+                }
+                if ((svc as any).depends_on) {
+                    yaml += `    depends_on:\n`;
+                    (svc as any).depends_on.forEach((d: string) => yaml += `      - ${d}\n`);
+                }
+                if ((svc as any).networks) {
+                    yaml += `    networks:\n`;
+                    (svc as any).networks.forEach((n: string) => yaml += `      - ${n}\n`);
+                }
+                yaml += '\n';
+            }
+        }
+
+        // Top-level Volumes
+        if (volumes.size > 0) {
+            yaml += 'volumes:\n';
+            volumes.forEach(vName => {
+                // Find node to get real config
+                // We need to reverse map name -> ID or just find by name
+                // Effecient way: iterate nodes again or store node ref in map.
+                // Simpler: iterate nodes, checked if mapped name matches.
+
+                const node = nodes.find(n => nodeNameMap.get(n.id) === vName);
+                if (!node || node.type !== 'volume') {
+                    // Fallback
+                    yaml += `  ${vName}:\n`;
+                    return;
+                }
+
+                yaml += `  ${vName}:\n`;
+                if (node.config.driver && node.config.driver !== 'local') yaml += `    driver: ${node.config.driver}\n`;
+
+                if (node.config.external) {
+                    yaml += `    external: true\n`;
+                    if (node.config.name) yaml += `    name: ${node.config.name}\n`;
+                } else {
+                    if (node.config.driverOpts && Object.keys(node.config.driverOpts).length > 0) {
+                        yaml += `    driver_opts:\n`;
+                        for (const [k, val] of Object.entries(node.config.driverOpts)) {
+                            yaml += `      ${k}: "${val}"\n`;
+                        }
+                    }
+                }
+            });
+            yaml += '\n';
+        }
+
+        // Top-level Networks
+        if (networks.size > 0) {
+            yaml += 'networks:\n';
+            networks.forEach(nName => {
+                const node = nodes.find(n => nodeNameMap.get(n.id) === nName);
+                if (!node || node.type !== 'network') {
+                    yaml += `  ${nName}:\n`;
+                    return;
+                }
+
+                yaml += `  ${nName}:\n`;
+                // Default to bridge if likely empty, but explicit is better
+                if (node.config.driver) yaml += `    driver: ${node.config.driver}\n`;
+
+                if (node.config.external) {
+                    yaml += `    external: true\n`;
+                } else { // Internal/Ipam ONLY if NOT external
+                    if (node.config.internal) yaml += `    internal: true\n`;
+
+                    if (node.config.ipam) {
+                        yaml += `    ipam:\n`;
+                        yaml += `      config:\n`;
+                        yaml += `        - subnet: ${node.config.ipam.subnet}\n`;
+                        if (node.config.ipam.gateway) yaml += `          gateway: ${node.config.ipam.gateway}\n`;
+                    }
+                }
+            });
+        }
+
+        this.downloadFile('docker-compose.yaml', yaml);
+    }
+
+    openImportModal() {
+        this.isImportModalOpen.set(true);
+        this.isMenuOpen.set(false);
+    }
+
+    closeImportModal() {
+        this.isImportModalOpen.set(false);
+    }
+
+    preventDefault(event: Event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    triggerFileInput(input: HTMLInputElement, event?: Event) {
+        if (event) {
+            event.stopPropagation();
+        }
+        // Reset value to allow selecting the same file again if needed
+        input.value = '';
+        input.click();
+    }
+
+    onFileDropped(event: DragEvent) {
+        this.preventDefault(event);
+        if (event.dataTransfer?.files.length) {
+            this.readFile(event.dataTransfer.files[0]);
+        }
+    }
+
+    onFileSelected(event: Event) {
+        const input = event.target as HTMLInputElement;
+        if (input.files?.length) {
+            this.readFile(input.files[0]);
+        }
+    }
+
+    private readFile(file: File) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const content = e.target?.result as string;
+            this.processYaml(content);
+        };
+        reader.readAsText(file);
+    }
+
+    private processYaml(content: string) {
+        try {
+            const data: any = yaml.load(content);
+            if (!data || !data.services) {
+                alert('Invalid docker-compose file: No services found');
+                return;
+            }
+
+            const newNodes: DockerNodeData[] = [];
+            const newConnections: DockConnection[] = [];
+            const serviceMap = new Map<string, string>(); // ServiceName -> NodeID
+
+            let yOffset = 100;
+            const xServices = 400;
+            const xResources = 800;
+
+            // 1. Create Service Nodes
+            for (const [name, svc] of Object.entries(data.services) as [string, any][]) {
+                const nodeId = crypto.randomUUID();
+                serviceMap.set(name, nodeId);
+
+                const config: any = {
+                    restart: svc.restart,
+                    container_name: svc.container_name,
+                    environment: svc.environment,
+                    ports: svc.ports,
+                    volumes: [], // Bind mounts only
+                    volumeMounts: {} // Map VolumeID -> TargetPath
+                };
+
+                // Image vs Build
+                if (svc.build) {
+                    if (typeof svc.build === 'string') {
+                        config.build = { context: svc.build };
+                    } else {
+                        config.build = { ...svc.build };
+                    }
+                } else {
+                    config.image = svc.image;
+                }
+
+                // Deploy / Resources
+                if (svc.deploy?.resources?.limits) {
+                    config.deploy = { resources: { limits: { ...svc.deploy.resources.limits } } };
+                }
+
+                // Healthcheck
+                if (svc.healthcheck) {
+                    config.healthcheck = { ...svc.healthcheck };
+                }
+
+                newNodes.push({
+                    id: nodeId, type: 'service', label: name, x: xServices, y: yOffset,
+                    inputs: [{ id: crypto.randomUUID(), type: 'dependency', dir: 'in', label: 'Dep In' }],
+                    outputs: [
+                        { id: crypto.randomUUID(), type: 'dependency', dir: 'out', label: 'Dep Out' },
+                        { id: crypto.randomUUID(), type: 'volume', dir: 'out', label: 'Vol Out' },
+                        { id: crypto.randomUUID(), type: 'network', dir: 'out', label: 'Net Out' }
+                    ],
+                    config
+                });
+
+                yOffset += 180;
+            }
+
+            // 2. Create Volume Nodes & Connections
+            let volY = 100;
+            const volumeMap = new Map<string, string>(); // VolName -> NodeID
+
+            if (data.volumes) {
+                for (const [name, vol] of Object.entries(data.volumes) as [string, any][]) {
+                    const nodeId = crypto.randomUUID();
+                    volumeMap.set(name, nodeId);
+
+                    // Safe handling if vol is null/undefined (typical in empty volume declaration)
+                    const volConfig = vol || {};
+
+                    newNodes.push({
+                        id: nodeId, type: 'volume', label: name, x: xResources, y: volY,
+                        inputs: [{ id: crypto.randomUUID(), type: 'volume', dir: 'in', label: 'Mount' }],
+                        outputs: [],
+                        config: {
+                            driver: volConfig.driver,
+                            external: volConfig.external,
+                            driverOpts: volConfig.driver_opts,
+                            name: volConfig.name
+                        }
+                    });
+                    volY += 120;
+                }
+            }
+
+            // 3. Create Network Nodes & Connections
+            let netY = volY + 50;
+            const networkMap = new Map<string, string>();
+
+            if (data.networks) {
+                for (const [name, net] of Object.entries(data.networks) as [string, any][]) {
+                    const nodeId = crypto.randomUUID();
+                    networkMap.set(name, nodeId);
+
+                    const netConfig = net || {};
+                    const ipam = netConfig.ipam?.config?.[0]; // Grab first config if exists
+
+                    newNodes.push({
+                        id: nodeId, type: 'network', label: name, x: xResources, y: netY,
+                        inputs: [{ id: crypto.randomUUID(), type: 'network', dir: 'in', label: 'Member' }],
+                        outputs: [],
+                        config: {
+                            driver: netConfig.driver,
+                            external: netConfig.external?.name ? true : (netConfig.external || false), // Handle object or bool
+                            internal: netConfig.internal,
+                            ipam: ipam ? { subnet: ipam.subnet, gateway: ipam.gateway } : undefined
+                        }
+                    });
+                    netY += 120;
+                }
+            }
+
+            // 4. Connect Services
+            for (const [name, svc] of Object.entries(data.services) as [string, any][]) {
+                const sourceId = serviceMap.get(name)!;
+                const sourceNode = newNodes.find(n => n.id === sourceId)!;
+
+                // Depends On
+                if (svc.depends_on) {
+                    const deps = Array.isArray(svc.depends_on) ? svc.depends_on : Object.keys(svc.depends_on);
+                    deps.forEach((depName: string) => {
+                        const targetId = serviceMap.get(depName);
+                        if (targetId) {
+                            const targetNode = newNodes.find(n => n.id === targetId)!;
+                            newConnections.push({
+                                id: crypto.randomUUID(),
+                                sourceNodeId: sourceId,
+                                sourceSocketId: sourceNode.outputs.find(s => s.type === 'dependency')!.id,
+                                targetNodeId: targetId,
+                                targetSocketId: targetNode.inputs.find(s => s.type === 'dependency')!.id
+                            });
+                        }
+                    });
+                }
+
+                // Networks
+                if (svc.networks) {
+                    const nets = Array.isArray(svc.networks) ? svc.networks : Object.keys(svc.networks);
+                    nets.forEach((netName: string) => {
+                        const targetId = networkMap.get(netName);
+                        if (targetId) {
+                            const targetNode = newNodes.find(n => n.id === targetId)!;
+                            newConnections.push({
+                                id: crypto.randomUUID(),
+                                sourceNodeId: sourceId,
+                                sourceSocketId: sourceNode.outputs.find(s => s.type === 'network')!.id,
+                                targetNodeId: targetId,
+                                targetSocketId: targetNode.inputs.find(s => s.type === 'network')!.id
+                            });
+                        }
+                    });
+                }
+
+                // Volumes
+                if (svc.volumes) {
+                    svc.volumes.forEach((volStr: string | any) => {
+                        // Parse "source:target:mode" or object
+                        let source = '';
+                        let target = '';
+
+                        if (typeof volStr === 'string') {
+                            const parts = volStr.split(':');
+                            source = parts[0];
+                            target = parts.length > 1 ? parts[1] : '';
+                        } else {
+                            source = volStr.source;
+                            target = volStr.target;
+                        }
+
+                        const targetId = volumeMap.get(source);
+                        if (targetId) {
+                            // It's a managed volume -> Connection
+                            const targetNode = newNodes.find(n => n.id === targetId)!;
+                            newConnections.push({
+                                id: crypto.randomUUID(),
+                                sourceNodeId: sourceId,
+                                sourceSocketId: sourceNode.outputs.find(s => s.type === 'volume')!.id,
+                                targetNodeId: targetId,
+                                targetSocketId: targetNode.inputs.find(s => s.type === 'volume')!.id
+                            });
+
+                            // Save mount path
+                            if (!sourceNode.config.volumeMounts) sourceNode.config.volumeMounts = {};
+                            sourceNode.config.volumeMounts[targetId] = target;
+
+                        } else {
+                            // Bind mount -> Add to config.volumes
+                            if (!sourceNode.config.volumes) sourceNode.config.volumes = [];
+                            sourceNode.config.volumes.push(volStr);
+                        }
+                    });
+                }
+            }
+
+            // Apply new state
+            this.nodes.set(newNodes);
+            this.connections.set(newConnections);
+            this.closeImportModal();
+
+        } catch (e) {
+            console.error(e);
+            alert('Error parsing YAML file. Please check the console.');
+        }
+    }
+
+    private downloadFile(filename: string, content: string) {
+        const element = document.createElement('a');
+        const file = new Blob([content], { type: 'text/yaml' });
+        element.href = URL.createObjectURL(file);
+        element.download = filename;
+        document.body.appendChild(element); // Required for this to work in FireFox
+        element.click();
+        document.body.removeChild(element);
+    }
+}

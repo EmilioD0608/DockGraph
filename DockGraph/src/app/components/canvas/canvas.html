@@ -1,0 +1,61 @@
+<div class="canvas-background" [style.background-position]="transform().x + 'px ' + transform().y + 'px'">
+</div>
+
+<div class="canvas-content"
+    [style.transform]="'translate(' + transform().x + 'px, ' + transform().y + 'px) scale(' + transform().scale + ')'">
+
+    <!-- SVG Layer for connections -->
+    <svg class="connections-layer" style="overflow: visible">
+        <!-- Existing Connections -->
+        <path *ngFor="let conn of connections" [attr.d]="getPath(
+                getSocketPosition(conn.sourceNodeId, conn.sourceSocketId).x,
+                getSocketPosition(conn.sourceNodeId, conn.sourceSocketId).y,
+                getSocketPosition(conn.targetNodeId, conn.targetSocketId).x,
+                getSocketPosition(conn.targetNodeId, conn.targetSocketId).y
+            )" [attr.stroke]="getConnectionColor(conn)" stroke-width="2" stroke-dasharray="10,5" fill="none"
+            class="connection-line" />
+
+        <!-- Dragging Connection -->
+        <path *ngIf="dragConnection() as drag" [attr.d]="getPath(drag.x1, drag.y1, drag.x2, drag.y2)"
+            [attr.stroke]="drag.color" stroke-width="2" stroke-dasharray="5,5" fill="none" />
+    </svg>
+
+    @for (node of nodes; track node.id) {
+    <div class="node-card" [class.node-volume]="node.type === 'volume'" [class.node-network]="node.type === 'network'"
+        [style.left.px]="node.x" [style.top.px]="node.y" (mousedown)="onNodeMouseDown($event, node)"
+        (contextmenu)="onNodeContextMenu($event, node)">
+
+        <div class="node-header" [style.border-top-color]="node.color">
+            <div class="header-left">
+                <lucide-icon *ngIf="node.type === 'service'" [img]="icons.server" class="node-icon"></lucide-icon>
+                <lucide-icon *ngIf="node.type === 'volume'" [img]="icons.db" class="node-icon"></lucide-icon>
+                <lucide-icon *ngIf="node.type === 'network'" [img]="icons.network" class="node-icon"></lucide-icon>
+                <span class="node-title">{{ node.label }}</span>
+            </div>
+        </div>
+
+        <div class="node-body">
+            <!-- Inputs (Left) -->
+            <div class="sockets-column inputs">
+                <div *ngFor="let socket of node.inputs" class="socket-item input"
+                    (mousedown)="onSocketMouseDown($event, node, socket)"
+                    (mouseup)="onSocketMouseUp($event, node, socket)">
+                    <div class="socket-point" [style.background-color]="getSocketColor(socket.type)"></div>
+                    <span class="socket-label">{{ socket.label }}</span>
+                </div>
+            </div>
+
+            <!-- Outputs (Right) -->
+            <div class="sockets-column outputs">
+                <div *ngFor="let socket of node.outputs" class="socket-item output"
+                    (mousedown)="onSocketMouseDown($event, node, socket)"
+                    (mouseup)="onSocketMouseUp($event, node, socket)">
+                    <span class="socket-label">{{ socket.label }}</span>
+                    <div class="socket-point" [style.background-color]="getSocketColor(socket.type)"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+
+</div>
