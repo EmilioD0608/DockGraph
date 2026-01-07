@@ -34,6 +34,7 @@ export interface DockerNodeData {
         image?: string;         // ej: "postgres:14-alpine"
 
         ports?: string[];       // ej: ["5432:5432"]
+        expose?: string[];      // internal only ports
         environment?: Record<string, string>; // ej: { POSTGRES_PASSWORD: "admin" }
         volumes?: string[];     // Rutas locales
         command?: string;

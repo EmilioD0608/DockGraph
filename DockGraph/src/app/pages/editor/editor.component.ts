@@ -243,6 +243,7 @@ export class EditorComponent {
                 // Optional Basic Fields
                 if (node.config.container_name) svc.container_name = node.config.container_name;
                 if (node.config.ports && node.config.ports.length > 0) svc.ports = [...node.config.ports];
+                if (node.config.expose && node.config.expose.length > 0) svc.expose = [...node.config.expose];
                 if (node.config.environment && Object.keys(node.config.environment).length > 0) svc.environment = { ...node.config.environment };
                 // Explicit Volumes list (bind mounts)
                 if (node.config.volumes && node.config.volumes.length > 0) svc.volumes = [...node.config.volumes];
@@ -358,6 +359,10 @@ export class EditorComponent {
                 if ((svc as any).ports) {
                     yaml += `    ports:\n`;
                     (svc as any).ports.forEach((p: string) => yaml += `      - "${p}"\n`);
+                }
+                if ((svc as any).expose) {
+                    yaml += `    expose:\n`;
+                    (svc as any).expose.forEach((p: string) => yaml += `      - "${p}"\n`);
                 }
                 if ((svc as any).environment) {
                     yaml += `    environment:\n`;
@@ -519,6 +524,7 @@ export class EditorComponent {
                     container_name: svc.container_name,
                     environment: svc.environment,
                     ports: svc.ports,
+                    expose: svc.expose,
                     volumes: [], // Bind mounts only
                     volumeMounts: {} // Map VolumeID -> TargetPath
                 };

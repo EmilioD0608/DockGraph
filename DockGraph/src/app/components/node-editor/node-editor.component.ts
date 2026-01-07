@@ -23,6 +23,7 @@ export class NodeEditorComponent {
     form: FormGroup;
     envVars: { key: string, value: string }[] = [];
     driverOptsList: { key: string, value: string }[] = [];
+    portEntries: { mode: 'public' | 'internal', hostPort: string, containerPort: string }[] = [];
     volumeMountsList: { volumeId: string, volumeLabel: string, target: string }[] = [];
 
     isIpamExpanded = signal(false);
@@ -47,8 +48,7 @@ export class NodeEditorComponent {
         this.form = this.fb.group({
             label: ['', Validators.required],
             image: [''],
-            // We will handle array/object fields manually or via sub-components for simplicity first phase
-            ports: [''], // Comma separated for now
+            // ports field removed from form control as we handle it manually
             volumes: [''], // Comma separated for now
             restart: ['no'],
             driver: [''],
@@ -72,7 +72,7 @@ export class NodeEditorComponent {
                 this.form.patchValue({
                     label: this.node.label,
                     image: this.node.config.image || '',
-                    ports: (this.node.config.ports || []).join(', '),
+                    // ports: ... removed
                     volumes: (this.node.config.volumes || []).join(', '),
                     restart: this.node.config.restart || 'no',
                     driver: this.node.config.driver || (this.node.type === 'network' ? 'bridge' : 'local'),
@@ -90,6 +90,26 @@ export class NodeEditorComponent {
                     cpuLimit: this.node.config.deploy?.resources?.limits?.cpus || '',
                     memLimit: this.node.config.deploy?.resources?.limits?.memory || ''
                 });
+
+                // Parse Ports
+                this.portEntries = [];
+                // 1. Ports (Public)
+                if (this.node.config.ports) {
+                    this.node.config.ports.forEach(p => {
+                        const parts = p.split(':');
+                        if (parts.length === 2) {
+                            this.portEntries.push({ mode: 'public', hostPort: parts[0], containerPort: parts[1] });
+                        } else {
+                            this.portEntries.push({ mode: 'public', hostPort: '', containerPort: parts[0] });
+                        }
+                    });
+                }
+                // 2. Expose (Internal)
+                if (this.node.config.expose) {
+                    this.node.config.expose.forEach(p => {
+                        this.portEntries.push({ mode: 'internal', hostPort: '', containerPort: p });
+                    });
+                }
 
                 // Parse Volume Mounts
                 this.volumeMountsList = this.connectedVolumes.map(vol => ({
@@ -120,7 +140,7 @@ export class NodeEditorComponent {
             this.form.patchValue({
                 label: this.node.label,
                 image: this.node.config.image || '',
-                ports: (this.node.config.ports || []).join(', '),
+                // ports removed
                 volumes: (this.node.config.volumes || []).join(', '),
                 restart: this.node.config.restart || 'no',
                 driver: this.node.config.driver || (this.node.type === 'network' ? 'bridge' : 'local'),
@@ -139,6 +159,24 @@ export class NodeEditorComponent {
                 memLimit: this.node.config.deploy?.resources?.limits?.memory || ''
             });
 
+            // Parse Ports
+            this.portEntries = [];
+            if (this.node.config.ports) {
+                this.node.config.ports.forEach(p => {
+                    const parts = p.split(':');
+                    if (parts.length === 2) {
+                        this.portEntries.push({ mode: 'public', hostPort: parts[0], containerPort: parts[1] });
+                    } else {
+                        this.portEntries.push({ mode: 'public', hostPort: '', containerPort: parts[0] });
+                    }
+                });
+            }
+            if (this.node.config.expose) {
+                this.node.config.expose.forEach(p => {
+                    this.portEntries.push({ mode: 'internal', hostPort: '', containerPort: p });
+                });
+            }
+
             // Parse Volume Mounts
             this.volumeMountsList = this.connectedVolumes.map(vol => ({
                 volumeId: vol.id,
@@ -156,6 +194,29 @@ export class NodeEditorComponent {
         }
     }
 
+    // PORTS MANGEMENT
+    addPort() {
+        this.portEntries.push({ mode: 'public', hostPort: '8080', containerPort: '80' });
+    }
+
+    removePort(index: number) {
+        this.portEntries.splice(index, 1);
+    }
+
+    updatePortMode(index: number, event: Event) {
+        const select = event.target as HTMLSelectElement;
+        this.portEntries[index].mode = select.value as 'public' | 'internal';
+    }
+
+    updateHostPort(index: number, event: Event) {
+        const input = event.target as HTMLInputElement;
+        this.portEntries[index].hostPort = input.value;
+    }
+
+    updateContainerPort(index: number, event: Event) {
+        const input = event.target as HTMLInputElement;
+        this.portEntries[index].containerPort = input.value;
+    }
 
 
     filterImages(query: string) {
@@ -265,10 +326,27 @@ export class NodeEditorComponent {
                 return Array.isArray(val) ? val : [];
             };
 
+            // Reconstruct Ports and Expose
+            const ports: string[] = [];
+            const expose: string[] = [];
+
+            this.portEntries.forEach(p => {
+                if (p.mode === 'public') {
+                    if (p.hostPort) {
+                        ports.push(`${p.hostPort}:${p.containerPort}`);
+                    } else {
+                        ports.push(p.containerPort); // Random host port
+                    }
+                } else {
+                    expose.push(p.containerPort);
+                }
+            });
+
             newConfig = {
                 ...newConfig,
                 image: formVal.image,
-                ports: splitList(formVal.ports),
+                ports: ports,
+                expose: expose,
                 volumes: splitList(formVal.volumes),
                 restart: formVal.restart,
                 environment: envObj

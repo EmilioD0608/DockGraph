@@ -57,9 +57,35 @@
                 <input type="text" formControlName="containerName" placeholder="my-custom-container">
             </div>
 
-            <div class="form-group">
-                <label>Puertos (Host:Container)</label>
-                <input type="text" formControlName="ports" placeholder="ej: 3000:3000, 80:80">
+            <!-- Ports Management -->
+            <div class="form-section">
+                <div class="section-header">
+                    <label>Puertos</label>
+                    <button type="button" class="btn-small" (click)="addPort()">+ Add</button>
+                </div>
+                <div class="env-list">
+                    <div *ngFor="let port of portEntries; let i = index" class="env-row">
+                        <select [value]="port.mode" (change)="updatePortMode(i, $event)"
+                            style="width: 130px; margin-right: 5px;">
+                            <option value="public">Public (Host)</option>
+                            <option value="internal">Internal (Expose)</option>
+                        </select>
+
+                        <ng-container *ngIf="port.mode === 'public'">
+                            <input type="text" [value]="port.hostPort" (input)="updateHostPort(i, $event)"
+                                placeholder="Host (Auto)" style="flex: 1; min-width: 60px;">
+                            <span class="separator">:</span>
+                        </ng-container>
+
+                        <input type="text" [value]="port.containerPort" (input)="updateContainerPort(i, $event)"
+                            placeholder="Container Port" style="flex: 1; min-width: 60px;">
+
+                        <button type="button" class="icon-btn-danger" (click)="removePort(i)">×</button>
+                    </div>
+                    <div *ngIf="portEntries.length === 0" class="empty-msg">
+                        No ports configured
+                    </div>
+                </div>
             </div>
 
             <!-- Volume MountPoints (Dynamic based on connections) -->
