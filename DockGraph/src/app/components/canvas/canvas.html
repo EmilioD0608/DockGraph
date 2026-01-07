@@ -39,9 +39,11 @@
             <div class="sockets-column inputs">
                 <div *ngFor="let socket of node.inputs" class="socket-item input"
                     (mousedown)="onSocketMouseDown($event, node, socket)"
-                    (mouseup)="onSocketMouseUp($event, node, socket)">
+                    (mouseup)="onSocketMouseUp($event, node, socket)" title="{{ socket.label }}">
                     <div class="socket-point" [style.background-color]="getSocketColor(socket.type)"></div>
-                    <span class="socket-label">{{ socket.label }}</span>
+                    <lucide-icon [img]="getSocketIcon(socket.type)" class="socket-icon-small"
+                        [style.color]="isSocketConnected(node.id, socket.id) ? getSocketColor(socket.type) : null">
+                    </lucide-icon>
                 </div>
             </div>
 
@@ -49,8 +51,10 @@
             <div class="sockets-column outputs">
                 <div *ngFor="let socket of node.outputs" class="socket-item output"
                     (mousedown)="onSocketMouseDown($event, node, socket)"
-                    (mouseup)="onSocketMouseUp($event, node, socket)">
-                    <span class="socket-label">{{ socket.label }}</span>
+                    (mouseup)="onSocketMouseUp($event, node, socket)" title="{{ socket.label }}">
+                    <lucide-icon [img]="getSocketIcon(socket.type)" class="socket-icon-small"
+                        [style.color]="isSocketConnected(node.id, socket.id) ? getSocketColor(socket.type) : null">
+                    </lucide-icon>
                     <div class="socket-point" [style.background-color]="getSocketColor(socket.type)"></div>
                 </div>
             </div>

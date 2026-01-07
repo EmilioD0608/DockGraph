@@ -80,9 +80,7 @@
 
 /* ... skipped strict match ... */
 
-.sockets-column.outputs .socket-item {
-    margin-right: -29px;
-}
+
 
 /* Specific Types */
 .node-volume {
@@ -105,7 +103,8 @@
     padding: 10px 12px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
+    /* Centered Title */
     align-items: center;
     background: rgba(255, 255, 255, 0.02);
     border-radius: 8px 8px 0 0;
@@ -122,6 +121,9 @@
     width: 16px;
     height: 16px;
     color: var(--color-primary, #018790);
+    position: relative;
+    top: -1px;
+    /* Slight lift */
 }
 
 .node-title {
@@ -159,6 +161,22 @@
     color: #d4d4d8;
 }
 
+/* New CSS for Socket Icons */
+.socket-icon-small {
+    width: 14px;
+    height: 14px;
+    color: #d4d4d8;
+    /* Matches text color */
+    transition: color 0.1s;
+    position: relative;
+    top: -2px;
+    /* Lift more as requested */
+}
+
+.socket-item:hover .socket-icon-small {
+    color: white;
+}
+
 .socket-point {
     width: 10px;
     height: 10px;
@@ -185,10 +203,14 @@
 .sockets-column.inputs .socket-item {
     flex-direction: row;
     margin-left: -25px;
+    gap: 20px;
+    /* Push icons further inside */
 }
 
 /* Pull dot to edge (12px padding + 13px extra) */
 
 .sockets-column.outputs .socket-item {
     margin-right: -29px;
+    gap: 20px;
+    /* Push icons further inside */
 }

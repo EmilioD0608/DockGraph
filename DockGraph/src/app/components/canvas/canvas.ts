@@ -1,6 +1,6 @@
 import { Component, signal, HostListener, HostBinding, Input, Output, EventEmitter, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule, Box, Server, Database, Network } from 'lucide-angular';
+import { LucideAngularModule, Box, Server, Database, Network, Layers } from 'lucide-angular';
 import { DockerNodeData, DockConnection, Socket } from '../../models/docker-node';
 
 @Component({
@@ -29,12 +29,21 @@ export class Canvas {
   dragStart = { x: 0, y: 0 };
   nodeStart = { x: 0, y: 0 };
 
-  readonly icons = { box: Box, server: Server, db: Database, network: Network };
+  readonly icons = { box: Box, server: Server, db: Database, network: Network, layers: Layers };
 
   private startPosition = { x: 0, y: 0 };
   private initialTransform = { x: 0, y: 0 };
 
   constructor(private elementRef: ElementRef) { }
+
+  getSocketIcon(type: string): any {
+    switch (type) {
+      case 'dependency': return this.icons.layers;
+      case 'volume': return this.icons.db;
+      case 'network': return this.icons.network;
+      default: return this.icons.box;
+    }
+  }
 
   private getMousePos(event: MouseEvent) {
     const rect = this.elementRef.nativeElement.getBoundingClientRect();
@@ -188,6 +197,13 @@ export class Canvas {
     const socket = node.outputs.find(s => s.id === conn.sourceSocketId) ||
       node.inputs.find(s => s.id === conn.sourceSocketId);
     return socket ? this.getSocketColor(socket.type) : '#999';
+  }
+
+  isSocketConnected(nodeId: string, socketId: string): boolean {
+    return this.connections.some(c =>
+      (c.sourceNodeId === nodeId && c.sourceSocketId === socketId) ||
+      (c.targetNodeId === nodeId && c.targetSocketId === socketId)
+    );
   }
 
   // Helpers for line drawing
