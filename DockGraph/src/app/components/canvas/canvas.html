@@ -13,7 +13,7 @@
                 getSocketPosition(conn.targetNodeId, conn.targetSocketId).x,
                 getSocketPosition(conn.targetNodeId, conn.targetSocketId).y
             )" [attr.stroke]="getConnectionColor(conn)" stroke-width="2" stroke-dasharray="10,5" fill="none"
-            class="connection-line" />
+            class="connection-line" [class.selected]="conn.id === selectedConnectionId" />
 
         <!-- Dragging Connection -->
         <path *ngIf="dragConnection() as drag" [attr.d]="getPath(drag.x1, drag.y1, drag.x2, drag.y2)"

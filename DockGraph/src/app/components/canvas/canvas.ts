@@ -18,6 +18,8 @@ export class Canvas {
   @Output() nodeRightClick = new EventEmitter<{ event: MouseEvent, nodeId: string }>();
   @Output() connectionCreated = new EventEmitter<DockConnection>();
 
+  @Input() selectedConnectionId: string | null = null;
+
   transform = signal({ x: 0, y: 0, scale: 1 });
   isDraggingCanvas = signal(false);
 

@@ -1,25 +1,34 @@
 import { Component, Input, Output, EventEmitter, signal, computed, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, ChevronLeft, ChevronRight, Plus, Trash2, Save, Link, ArrowRight } from 'lucide-angular';
+import { LucideAngularModule, ChevronLeft, ChevronRight, Plus, Trash2, Save, Link, ArrowRight, Settings, GitBranch } from 'lucide-angular';
 import { DockerNodeData, DockConnection } from '../../models/docker-node';
+
+import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 
 @Component({
     selector: 'app-left-panel',
     standalone: true,
-    imports: [CommonModule, FormsModule, LucideAngularModule],
+    imports: [CommonModule, FormsModule, LucideAngularModule, ConfirmDialogComponent],
     templateUrl: './left-panel.component.html',
     styleUrls: ['./left-panel.component.css']
 })
 export class LeftPanelComponent {
     @Input() nodes: DockerNodeData[] = [];
     @Input() connections: DockConnection[] = [];
+    @Input() selectedConnectionId: string | null = null;
 
     @Output() connectionCreate = new EventEmitter<{ sourceId: string, targetId: string }>();
     @Output() connectionUpdate = new EventEmitter<DockConnection>();
     @Output() connectionDelete = new EventEmitter<string>();
+    @Output() connectionSelect = new EventEmitter<string>();
 
     isOpen = signal(true);
+    activeTab = signal<'relations' | 'settings'>('relations');
+
+    // Dialog State
+    dialogVisible = false;
+    itemToDelete: string | null = null;
 
     readonly icons = {
         chevronLeft: ChevronLeft,
@@ -28,7 +37,9 @@ export class LeftPanelComponent {
         trash: Trash2,
         save: Save,
         link: Link,
-        arrowRight: ArrowRight
+        arrowRight: ArrowRight,
+        settings: Settings,
+        branch: GitBranch
     };
 
     newConnSourceId = signal('');
@@ -50,6 +61,11 @@ export class LeftPanelComponent {
         this.isOpen.update(v => !v);
     }
 
+    selectTab(tab: 'relations' | 'settings') {
+        this.activeTab.set(tab);
+        this.isOpen.set(true);
+    }
+
     create() {
         if (this.newConnSourceId() && this.newConnTargetId()) {
             this.connectionCreate.emit({
@@ -66,9 +82,21 @@ export class LeftPanelComponent {
     }
 
     deleteConn(id: string) {
-        if (confirm('¿Estás seguro de eliminar esta relación?')) {
-            this.connectionDelete.emit(id);
+        this.itemToDelete = id;
+        this.dialogVisible = true;
+    }
+
+    onConfirmDelete() {
+        if (this.itemToDelete) {
+            this.connectionDelete.emit(this.itemToDelete);
+            this.itemToDelete = null;
         }
+        this.dialogVisible = false;
+    }
+
+    onCancelDelete() {
+        this.itemToDelete = null;
+        this.dialogVisible = false;
     }
 
     getNodeLabel(id: string): string {

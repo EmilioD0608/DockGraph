@@ -42,16 +42,18 @@
     </header>
 
     <main class="content-area">
-        <app-left-panel [nodes]="nodes()" [connections]="connections()"
+        <app-left-panel [nodes]="nodes()" [connections]="connections()" [selectedConnectionId]="selectedConnectionId()"
             (connectionCreate)="handlePanelConnectionCreate($event)"
             (connectionUpdate)="handlePanelConnectionUpdate($event)"
-            (connectionDelete)="handlePanelConnectionDelete($event)">
+            (connectionDelete)="handlePanelConnectionDelete($event)"
+            (connectionSelect)="handlePanelConnectionSelect($event)">
         </app-left-panel>
 
 
         <div class="canvas-container">
             <app-canvas [nodes]="nodes()" [connections]="connections()" (nodeMove)="updateNode($event)"
-                (nodeRightClick)="handleNodeContextMenu($event)" (connectionCreated)="handleConnectionCreate($event)">
+                [selectedConnectionId]="selectedConnectionId()" (nodeRightClick)="handleNodeContextMenu($event)"
+                (connectionCreated)="handleConnectionCreate($event)">
             </app-canvas>
         </div>
     </main>

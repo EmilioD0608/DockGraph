@@ -8,11 +8,12 @@ import { ContextMenuComponent } from '../../components/context-menu/context-menu
 import { NodeEditorComponent } from '../../components/node-editor/node-editor.component';
 import { LeftPanelComponent } from '../../components/left-panel/left-panel.component';
 import { DockerNodeData, DockConnection, Socket } from '../../models/docker-node';
+import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 
 @Component({
     selector: 'app-editor',
     standalone: true,
-    imports: [CommonModule, LucideAngularModule, Canvas, ContextMenuComponent, NodeEditorComponent, LeftPanelComponent],
+    imports: [CommonModule, LucideAngularModule, Canvas, ContextMenuComponent, NodeEditorComponent, LeftPanelComponent, ConfirmDialogComponent],
     templateUrl: './editor.component.html',
     styleUrl: './editor.component.css'
 })
@@ -27,6 +28,8 @@ export class EditorComponent {
 
     nodes = signal<DockerNodeData[]>([]);
     connections = signal<DockConnection[]>([]);
+
+    selectedConnectionId = signal<string | null>(null);
 
     editingNode = signal<DockerNodeData | null>(null);
 
@@ -87,7 +90,32 @@ export class EditorComponent {
         });
     }
 
-    @HostListener('document:click')
+    @HostListener('document:click', ['$event'])
+    onDocumentClick(event: MouseEvent) {
+        // If clicking outside, close context menu
+        // Check if click is inside the context menu itself needs to be handled if we want to keep it open on click inside
+        // But usually we close it on any click outside.
+        // The context menu usually stops propagation if clicked inside?
+
+        // Actually, onDocumentClick is called for *every* click. 
+        // We just want to check:
+        // 1. Close context menu (handled by logic below)
+        // 2. Deselect connection if click is outside panel.
+
+        if (this.contextMenu().visible) {
+            this.closeContextMenu();
+        }
+
+        const target = event.target as Element;
+        // Check if target exists (it might be null if event is synthesized or void)
+        if (target) {
+            const insidePanel = target.closest('app-left-panel');
+            if (!insidePanel && this.selectedConnectionId()) {
+                this.selectedConnectionId.set(null);
+            }
+        }
+    }
+
     closeContextMenu() {
         if (this.contextMenu().visible) {
             this.contextMenu.update(prev => ({ ...prev, visible: false }));
@@ -189,6 +217,13 @@ export class EditorComponent {
 
     handlePanelConnectionDelete(connId: string) {
         this.connections.update(curr => curr.filter(c => c.id !== connId));
+        if (this.selectedConnectionId() === connId) {
+            this.selectedConnectionId.set(null);
+        }
+    }
+
+    handlePanelConnectionSelect(connId: string) {
+        this.selectedConnectionId.set(connId);
     }
 
     private getCanvasPoint(clientX: number, clientY: number) {

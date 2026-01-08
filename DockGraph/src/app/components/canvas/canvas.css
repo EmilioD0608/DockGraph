@@ -43,15 +43,41 @@
     z-index: 0;
 }
 
+/* Pulse Animation */
 @keyframes dash-flow {
     to {
         stroke-dashoffset: -30;
     }
 }
 
+@keyframes pulse-connection {
+    0% {
+        stroke-width: 2;
+        stroke-opacity: 0.8;
+    }
+
+    50% {
+        stroke-width: 4;
+        stroke-opacity: 1;
+    }
+
+    100% {
+        stroke-width: 2;
+        stroke-opacity: 0.8;
+    }
+}
+
 .connection-line {
     animation: dash-flow 2s linear infinite;
     opacity: 0.8;
+    transition: stroke 0.3s;
+}
+
+.connection-line.selected {
+    animation: dash-flow 2s linear infinite, pulse-connection 1.5s ease-in-out infinite;
+    stroke: #ffffff !important;
+    /* Force white highlight or bright color */
+    z-index: 100;
 }
 
 /* Node Styles */
