@@ -1,6 +1,7 @@
 import { Component, signal, HostListener, HostBinding, Input, Output, EventEmitter, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule, Box, Server, Database, Network, Layers } from 'lucide-angular';
+import { LucideAngularModule, Box, Server, Database, Network, Layers, Globe, Hammer, Lock } from 'lucide-angular';
+
 import { DockerNodeData, DockConnection, Socket } from '../../models/docker-node';
 
 @Component({
@@ -29,7 +30,7 @@ export class Canvas {
   dragStart = { x: 0, y: 0 };
   nodeStart = { x: 0, y: 0 };
 
-  readonly icons = { box: Box, server: Server, db: Database, network: Network, layers: Layers };
+  readonly icons = { box: Box, server: Server, db: Database, network: Network, layers: Layers, globe: Globe, hammer: Hammer, lock: Lock };
 
   private startPosition = { x: 0, y: 0 };
   private initialTransform = { x: 0, y: 0 };
@@ -43,6 +44,22 @@ export class Canvas {
       case 'network': return this.icons.network;
       default: return this.icons.box;
     }
+  }
+
+  hasPorts(node: DockerNodeData): boolean {
+    return !!(node.config.ports && node.config.ports.length > 0);
+  }
+
+  hasBuild(node: DockerNodeData): boolean {
+    return !!node.config.build;
+  }
+
+  isExternal(node: DockerNodeData): boolean {
+    return !!node.config.external;
+  }
+
+  isInternal(node: DockerNodeData): boolean {
+    return !!node.config.internal;
   }
 
   private getMousePos(event: MouseEvent) {
@@ -85,7 +102,6 @@ export class Canvas {
 
   onSocketMouseDown(event: MouseEvent, node: DockerNodeData, socket: Socket) {
     event.stopPropagation();
-    // Allow dragging from both 'in' and 'out' sockets
     this.activeSocket = { nodeId: node.id, socketId: socket.id, type: socket.type, dir: socket.dir };
 
     const pos = this.getMousePos(event);
@@ -104,12 +120,10 @@ export class Canvas {
     if (start && start.nodeId !== node.id) {
       let sourceInfo, targetInfo;
 
-      // Case 1: Dragged from Output to Input
       if (start.dir === 'out' && socket.dir === 'in') {
         sourceInfo = start;
         targetInfo = { nodeId: node.id, socketId: socket.id };
       }
-      // Case 2: Dragged from Input to Output (Reverse connection)
       else if (start.dir === 'in' && socket.dir === 'out') {
         sourceInfo = { nodeId: node.id, socketId: socket.id, type: socket.type };
         targetInfo = start;
@@ -119,7 +133,7 @@ export class Canvas {
         this.connectionCreated.emit({
           id: crypto.randomUUID(),
           sourceNodeId: sourceInfo.nodeId,
-          sourceSocketId: sourceInfo.socketId!, // '!' because logic ensures it exists
+          sourceSocketId: sourceInfo.socketId!,
           targetNodeId: targetInfo.nodeId,
           targetSocketId: targetInfo.socketId!
         });
@@ -158,8 +172,6 @@ export class Canvas {
     // Connection Drag
     if (this.dragConnection() && this.activeSocket) {
       const pos = this.getMousePos(event);
-
-      // Update x2, y2 only
       this.dragConnection.update(c => c ? { ...c, x2: pos.x, y2: pos.y } : null);
     }
   }
@@ -186,8 +198,6 @@ export class Canvas {
   }
 
   isCompatible(sourceType: string, targetType: string): boolean {
-    // Logic: Service -> Service (Dep), Service -> Volume (Vol), Service -> Network (Net)
-    // socket.type maps one-to-one here conveniently
     return sourceType === targetType;
   }
 
@@ -206,41 +216,46 @@ export class Canvas {
     );
   }
 
-  // Helpers for line drawing
   getPath(x1: number, y1: number, x2: number, y2: number): string {
-    // Bezier curve
     const dx = Math.abs(x2 - x1) * 0.5;
     return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
   }
 
+  // --- SOLUCIÓN ACTUALIZADA: SINCRONIZACIÓN PERFECTA ---
   getSocketPosition(nodeId: string, socketId: string): { x: number, y: number } {
     const node = this.nodes.find(n => n.id === nodeId);
     if (!node) return { x: 0, y: 0 };
 
-    // Calculate offset index
-    // Header height: ~40px
-    // Body padding: 12px
-    // Socket height: 24px
-    // Gap between sockets: 12px (defined in CSS .sockets-column gap: 12px)
-    // Total vertical step per socket = 24 + 12 = 36px
-    // Base Y offset (center of first socket) = Header(40) + Padding(12) + HalfSocket(12) = 64px
+    // Alturas basadas en el tipo de nodo
+    const isCompact = node.type === 'volume' || node.type === 'network';
+    const HEADER_HEIGHT = isCompact ? 36 : 41;
+    const SLOT_HEIGHT = isCompact ? 36 : 40;
 
+    // --- Inputs ---
     let index = node.inputs.findIndex(s => s.id === socketId);
     if (index !== -1) {
-      // Input socket position:
-      // X: node.x - 8
-      // Y: node.y + 64 + (index * 36)
-      return { x: node.x - 8, y: node.y + 64 + (index * 36) };
+      // Logic para inputs (lado izquierdo)
+      const xOffset = -10; // Todos tienen el punto un poco salido a la izquierda
+      const yOffset = (SLOT_HEIGHT / 2) + (index * SLOT_HEIGHT);
+
+      return {
+        x: node.x + xOffset,
+        y: node.y + HEADER_HEIGHT + yOffset
+      };
     }
 
+    // --- Outputs ---
     index = node.outputs.findIndex(s => s.id === socketId);
     if (index !== -1) {
-      // Output socket position:
-      // X: node.x + width + 12
-      // Y: node.y + 64 + (index * 36)
-      const width = (node.type === 'volume' || node.type === 'network') ? 180 : 200;
-      return { x: node.x + width + 12, y: node.y + 64 + (index * 36) };
+      const width = isCompact ? 160 : 200; // Updated width for compact nodes in CSS
+      const yOffset = (SLOT_HEIGHT / 2) + (index * SLOT_HEIGHT);
+
+      return {
+        x: node.x + width + 10,
+        y: node.y + HEADER_HEIGHT + yOffset
+      };
     }
+
     return { x: node.x, y: node.y };
   }
 }

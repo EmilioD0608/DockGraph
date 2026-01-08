@@ -5,7 +5,6 @@
     overflow: hidden;
     position: relative;
     background-color: #121214;
-    /* Match editor background */
 }
 
 .canvas-background {
@@ -16,8 +15,6 @@
     height: 100%;
     pointer-events: none;
     z-index: 0;
-
-    /* The requested Dot Grid */
     background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.08) 1px, transparent 0);
     background-size: 24px 24px;
     will-change: background-position;
@@ -35,12 +32,10 @@
 }
 
 /* Connections Layer */
-/* Connections Layer */
 .connections-layer {
     position: absolute;
     top: 0;
     left: 0;
-    /* Must have non-zero size for some browsers to render overflow content */
     width: 1px;
     height: 1px;
     pointer-events: none;
@@ -63,7 +58,6 @@
 .node-card {
     position: absolute;
     width: 200px;
-    /* Fixed width for calculation simplicity */
     background: rgba(30, 30, 32, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
@@ -77,10 +71,6 @@
     z-index: 1;
     overflow: visible;
 }
-
-/* ... skipped strict match ... */
-
-
 
 /* Specific Types */
 .node-volume {
@@ -100,11 +90,16 @@
 }
 
 .node-header {
-    padding: 10px 12px;
+    /* CAMBIO CLAVE: Altura fija y explícita para sincronizar con TS */
+    height: 41px;
+    box-sizing: border-box;
+    /* Incluye padding/border en la altura */
+    padding: 0 12px;
+    /* Quitamos padding vertical, usamos align-items */
+
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     justify-content: center;
-    /* Centered Title */
     align-items: center;
     background: rgba(255, 255, 255, 0.02);
     border-radius: 8px 8px 0 0;
@@ -123,7 +118,6 @@
     color: var(--color-primary, #018790);
     position: relative;
     top: -1px;
-    /* Slight lift */
 }
 
 .node-title {
@@ -131,46 +125,21 @@
     font-weight: 600;
 }
 
-.node-body {
-    padding: 12px;
-    min-height: 40px;
-    font-size: 0.85rem;
-    color: #a1a1aa;
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    overflow: visible;
-}
-
-.sockets-column {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
+/* Socket Styles Helpers */
 .socket-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    height: 24px;
     cursor: crosshair;
 }
 
-.socket-label {
-    font-size: 0.75rem;
-    color: #d4d4d8;
-}
-
-/* New CSS for Socket Icons */
 .socket-icon-small {
     width: 14px;
     height: 14px;
     color: #d4d4d8;
-    /* Matches text color */
     transition: color 0.1s;
     position: relative;
     top: -2px;
-    /* Lift more as requested */
 }
 
 .socket-item:hover .socket-icon-small {
@@ -191,7 +160,223 @@
     border-color: white;
 }
 
-/* Alignment */
+
+/* Service Grid Layout - 3 Equal Columns */
+.service-body {
+    display: flex;
+    height: 100%;
+    padding: 0;
+    width: 100%;
+}
+
+.service-col {
+    display: flex;
+    flex-direction: column;
+    width: 33.333%;
+    position: relative;
+}
+
+/* Column 1: Inputs */
+.service-col.service-inputs {
+    align-items: flex-start;
+    padding: 0;
+}
+
+.service-socket {
+    height: 40px;
+    margin-left: -15px;
+    padding-left: 0;
+    gap: 20px;
+    display: flex;
+    align-items: center;
+}
+
+/* Column 2: Indicators */
+.service-col.service-indicators {
+    padding: 0;
+}
+
+/* REMOVED: .service-col.service-indicators::after (Vertical line moved to indicator-box border) */
+
+.indicator-box {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.2);
+    transition: all 0.2s;
+    box-sizing: border-box;
+    position: relative;
+
+    /* Vertical Dividers */
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.indicator-box:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+}
+
+.indicator-box.full-height {
+    height: 100%;
+}
+
+.indicator-box.active {
+    color: var(--color-primary, #018790);
+    background: rgba(1, 135, 144, 0.1);
+    box-shadow: inset 0 0 10px rgba(1, 135, 144, 0.05);
+    /* Active State Borders */
+    border-left-color: var(--color-primary, #018790);
+    border-right-color: var(--color-primary, #018790);
+    z-index: 1;
+    /* Ensure borders are on top */
+}
+
+.indicator-icon {
+    width: 18px;
+    height: 18px;
+}
+
+/* Column 3: Outputs */
+.service-col.service-outputs {
+    padding: 0;
+}
+
+.service-socket-cell {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 0;
+    margin-right: -14px;
+    gap: 20px;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.service-socket-cell:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+}
+
+/* --- MODIFICACIONES PARA VOLUME Y NETWORK --- */
+
+/* --- LOW PROFILE NODES (Volume & Network) --- */
+
+.node-volume,
+.node-network {
+    width: 160px;
+    /* SLightly narrower */
+}
+
+/* Header Compacto */
+.node-volume .node-header,
+.node-network .node-header {
+    height: 36px;
+    padding: 0 8px;
+    font-size: 0.8rem;
+}
+
+.node-volume .node-icon,
+.node-network .node-icon {
+    width: 12px;
+    height: 12px;
+}
+
+/* Body Layout */
+.node-volume .service-col,
+.node-network .service-col {
+    width: 50% !important;
+}
+
+.node-volume .service-col.service-inputs,
+.node-network .service-col.service-inputs {
+    position: relative;
+    /* Reset from absolute */
+    opacity: 1;
+    pointer-events: auto;
+    width: 50% !important;
+    height: auto;
+    z-index: 1;
+}
+
+.node-volume .service-col.service-indicators,
+.node-network .service-col.service-indicators {
+    width: 50%;
+}
+
+.node-volume .service-col.service-outputs,
+.node-network .service-col.service-outputs {
+    display: none;
+}
+
+/* Socket Height Adjustment for Compact Nodes */
+.node-volume .service-socket,
+.node-network .service-socket,
+.node-volume .indicator-box,
+.node-network .indicator-box {
+    height: 36px;
+}
+
+.node-volume .indicator-box,
+.node-network .indicator-box {
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.node-volume .indicator-box.active,
+.node-network .indicator-box.active {
+    border-left-color: var(--color-primary, #018790);
+}
+
+.node-volume .socket-point,
+.node-network .socket-point {
+    width: 8px;
+    height: 8px;
+}
+
+.node-volume .socket-icon-small,
+.node-network .socket-icon-small {
+    width: 12px;
+    height: 12px;
+}
+
+.node-volume .indicator-icon,
+.node-network .indicator-icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* Default Fallback */
+.node-body:not(.service-body) {
+    padding: 12px;
+    min-height: 40px;
+    font-size: 0.85rem;
+    color: #a1a1aa;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    overflow: visible;
+}
+
+.sockets-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
 .sockets-column.inputs {
     align-items: flex-start;
 }
@@ -201,16 +386,11 @@
 }
 
 .sockets-column.inputs .socket-item {
-    flex-direction: row;
     margin-left: -25px;
     gap: 20px;
-    /* Push icons further inside */
 }
-
-/* Pull dot to edge (12px padding + 13px extra) */
 
 .sockets-column.outputs .socket-item {
     margin-right: -29px;
     gap: 20px;
-    /* Push icons further inside */
 }
