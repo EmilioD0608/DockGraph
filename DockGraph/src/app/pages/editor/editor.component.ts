@@ -6,12 +6,13 @@ import * as yaml from 'js-yaml';
 import { Canvas } from '../../components/canvas/canvas';
 import { ContextMenuComponent } from '../../components/context-menu/context-menu.component';
 import { NodeEditorComponent } from '../../components/node-editor/node-editor.component';
+import { LeftPanelComponent } from '../../components/left-panel/left-panel.component';
 import { DockerNodeData, DockConnection, Socket } from '../../models/docker-node';
 
 @Component({
     selector: 'app-editor',
     standalone: true,
-    imports: [CommonModule, LucideAngularModule, Canvas, ContextMenuComponent, NodeEditorComponent],
+    imports: [CommonModule, LucideAngularModule, Canvas, ContextMenuComponent, NodeEditorComponent, LeftPanelComponent],
     templateUrl: './editor.component.html',
     styleUrl: './editor.component.css'
 })
@@ -127,6 +128,67 @@ export class EditorComponent {
 
     handleConnectionCreate(conn: DockConnection) {
         this.connections.update(curr => [...curr, conn]);
+    }
+
+    // Left Panel Handlers
+    handlePanelConnectionCreate(event: { sourceId: string, targetId: string }) {
+        const sourceNode = this.nodes().find(n => n.id === event.sourceId);
+        const targetNode = this.nodes().find(n => n.id === event.targetId);
+
+        if (!sourceNode || !targetNode) return;
+
+        let sourceSocketId: string | undefined;
+        let targetSocketId: string | undefined;
+
+        // Logic to determine sockets based on types
+        if (sourceNode.type === 'service' && targetNode.type === 'service') {
+            // Dependency
+            sourceSocketId = sourceNode.outputs.find(s => s.type === 'dependency')?.id;
+            targetSocketId = targetNode.inputs.find(s => s.type === 'dependency')?.id;
+        } else if (sourceNode.type === 'service' && targetNode.type === 'volume') {
+            // Volume Mount
+            sourceSocketId = sourceNode.outputs.find(s => s.type === 'volume')?.id;
+            targetSocketId = targetNode.inputs.find(s => s.type === 'volume')?.id;
+        } else if (sourceNode.type === 'service' && targetNode.type === 'network') {
+            // Network Membership
+            sourceSocketId = sourceNode.outputs.find(s => s.type === 'network')?.id;
+            targetSocketId = targetNode.inputs.find(s => s.type === 'network')?.id;
+        }
+
+        if (sourceSocketId && targetSocketId) {
+            // Check if exists
+            const exists = this.connections().some(c =>
+                c.sourceNodeId === event.sourceId &&
+                c.targetNodeId === event.targetId &&
+                c.sourceSocketId === sourceSocketId &&
+                c.targetSocketId === targetSocketId
+            );
+
+            if (!exists) {
+                const newConn: DockConnection = {
+                    id: crypto.randomUUID(),
+                    sourceNodeId: event.sourceId,
+                    targetNodeId: event.targetId,
+                    sourceSocketId: sourceSocketId,
+                    targetSocketId: targetSocketId
+                };
+                this.connections.update(curr => [...curr, newConn]);
+            } else {
+                alert('La relación ya existe.');
+            }
+        } else {
+            alert('No se pudo determinar una conexión válida entre estos nodos.');
+        }
+    }
+
+    handlePanelConnectionUpdate(updatedConn: DockConnection) {
+        this.connections.update(curr =>
+            curr.map(c => c.id === updatedConn.id ? updatedConn : c)
+        );
+    }
+
+    handlePanelConnectionDelete(connId: string) {
+        this.connections.update(curr => curr.filter(c => c.id !== connId));
     }
 
     private getCanvasPoint(clientX: number, clientY: number) {

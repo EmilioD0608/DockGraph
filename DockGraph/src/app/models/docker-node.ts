@@ -12,6 +12,7 @@ export interface DockConnection {
     sourceSocketId: string;
     targetNodeId: string;
     targetSocketId: string;
+    name?: string;
 }
 
 export interface DockerNodeData {

@@ -42,6 +42,11 @@
     </header>
 
     <main class="content-area">
+        <app-left-panel [nodes]="nodes()" [connections]="connections()"
+            (connectionCreate)="handlePanelConnectionCreate($event)"
+            (connectionUpdate)="handlePanelConnectionUpdate($event)"
+            (connectionDelete)="handlePanelConnectionDelete($event)">
+        </app-left-panel>
 
 
         <div class="canvas-container">

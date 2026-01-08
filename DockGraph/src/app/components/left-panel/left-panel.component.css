@@ -1,0 +1,263 @@
+:host {
+    display: block;
+    position: fixed;
+    top: 60px;
+    /* Header height */
+    left: 0;
+    bottom: 0;
+    z-index: 50;
+    pointer-events: none;
+    /* Let clicks pass through outside the panel */
+}
+
+.panel-container {
+    width: 320px;
+    height: 100%;
+    /* Match Editor Panel Style: Deep dark background with blur */
+    background: rgba(24, 24, 27, 0.95);
+    backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateX(0);
+    pointer-events: auto;
+    /* Re-enable clicks */
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-container.collapsed {
+    transform: translateX(-320px);
+}
+
+.toggle-btn {
+    position: absolute;
+    right: -32px;
+    /* Outside the panel */
+    top: 20px;
+    width: 32px;
+    height: 32px;
+    background: #018790;
+    /* Var Primary */
+    border: none;
+    border-radius: 0 6px 6px 0;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 4px 0 12px rgba(0, 0, 0, 0.2);
+    pointer-events: auto;
+}
+
+.toggle-btn:hover {
+    background: #029aa5;
+}
+
+.panel-content {
+    padding: 1.5rem;
+    overflow-y: auto;
+    height: 100%;
+}
+
+.panel-header {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 1rem;
+}
+
+.panel-header h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+}
+
+.panel-section h3 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #a1a1aa;
+    margin-bottom: 1rem;
+}
+
+/* Form Styles */
+.create-box {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.85rem;
+    color: #a1a1aa;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+select,
+input[type="text"] {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 0.6rem;
+    color: white;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+select:focus,
+input[type="text"]:focus {
+    border-color: #018790;
+}
+
+select option {
+    background: #1f1f22;
+}
+
+.btn-primary {
+    width: 100%;
+    background: #018790;
+    color: white;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #029aa5;
+}
+
+.btn-primary:disabled {
+    background: #475569;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Connection List */
+.connections-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.connection-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.75rem;
+}
+
+.conn-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+}
+
+.node-badge {
+    background: rgba(255, 255, 255, 0.1);
+    color: #d4d4d8;
+    padding: 0.125rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+    border: 1px solid transparent;
+}
+
+/* Dynamic Colors for Connectors based on TargetType */
+.node-badge.dependency {
+    background: rgba(245, 158, 11, 0.15);
+    /* Yellow/Orange */
+    color: #fbbf24;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.node-badge.volume {
+    background: rgba(16, 185, 129, 0.15);
+    /* Green */
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.node-badge.network {
+    background: rgba(59, 130, 246, 0.15);
+    /* Blue */
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* Special Case: Source is always Service (Dependency-like) but maybe we just use standard color or dep color */
+.node-badge.source {
+    /* Usually services are "yellow" in this context logic if they are dependencies, 
+        but here we might just want a neutral or consistent service color. 
+        User asked for "relation colors". Service -> Volume = Green. 
+        So the badges should reflect that relation color.
+     */
+}
+
+
+.arrow-icon {
+    color: #64748b;
+    flex-shrink: 0;
+}
+
+.conn-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.name-input {
+    flex: 1;
+    font-size: 0.8rem !important;
+    padding: 0.4rem !important;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: color 0.2s, background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.empty-state {
+    text-align: center;
+    color: #64748b;
+    font-size: 0.85rem;
+    padding: 2rem 0;
+    font-style: italic;
+}
