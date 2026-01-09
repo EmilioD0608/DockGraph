@@ -1,8 +1,9 @@
-<div class="canvas-background" [style.background-position]="transform().x + 'px ' + transform().y + 'px'">
+<div class="canvas-background"
+    [style.background-position]="Math.round(transform().x) + 'px ' + Math.round(transform().y) + 'px'">
 </div>
 
 <div class="canvas-content"
-    [style.transform]="'translate(' + transform().x + 'px, ' + transform().y + 'px) scale(' + transform().scale + ')'">
+    [style.transform]="'translate(' + Math.round(transform().x) + 'px, ' + Math.round(transform().y) + 'px) scale(' + transform().scale + ')'">
 
     <!-- SVG Layer for connections -->
     <svg class="connections-layer" style="overflow: visible">
@@ -22,8 +23,8 @@
 
     @for (node of nodes; track node.id) {
     <div class="node-card" [class.node-volume]="node.type === 'volume'" [class.node-network]="node.type === 'network'"
-        [style.left.px]="node.x" [style.top.px]="node.y" (mousedown)="onNodeMouseDown($event, node)"
-        (contextmenu)="onNodeContextMenu($event, node)">
+        [style.left.px]="Math.round(node.x)" [style.top.px]="Math.round(node.y)"
+        (mousedown)="onNodeMouseDown($event, node)" (contextmenu)="onNodeContextMenu($event, node)">
 
         <div class="node-header" [style.border-top-color]="node.color">
             <div class="header-left">

@@ -17,7 +17,6 @@
     z-index: 0;
     background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.08) 1px, transparent 0);
     background-size: 24px 24px;
-    will-change: background-position;
 }
 
 .canvas-content {
@@ -28,7 +27,7 @@
     height: 0;
     overflow: visible;
     z-index: 1;
-    will-change: transform;
+    z-index: 1;
 }
 
 /* Connections Layer */
@@ -96,6 +95,9 @@
     transition: box-shadow 0.2s;
     z-index: 1;
     overflow: visible;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    backface-visibility: hidden;
 }
 
 /* Specific Types */
@@ -117,7 +119,7 @@
 
 .node-header {
     /* CAMBIO CLAVE: Altura fija y explícita para sincronizar con TS */
-    height: 41px;
+    height: 42px;
     box-sizing: border-box;
     /* Incluye padding/border en la altura */
     padding: 0 12px;

@@ -230,7 +230,7 @@ export class Canvas {
 
     // Alturas basadas en el tipo de nodo
     const isCompact = node.type === 'volume' || node.type === 'network';
-    const HEADER_HEIGHT = isCompact ? 36 : 41;
+    const HEADER_HEIGHT = isCompact ? 36 : 42;
     const SLOT_HEIGHT = isCompact ? 36 : 40;
 
     // --- Inputs ---
@@ -260,4 +260,6 @@ export class Canvas {
 
     return { x: node.x, y: node.y };
   }
+
+  protected readonly Math = Math;
 }
