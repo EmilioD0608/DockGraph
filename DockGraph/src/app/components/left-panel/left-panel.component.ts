@@ -1,10 +1,11 @@
-import { Component, Input, Output, EventEmitter, signal, computed, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, computed, OnChanges, SimpleChanges, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, ChevronLeft, ChevronRight, Plus, Trash2, Save, Link, ArrowRight, Settings, GitBranch } from 'lucide-angular';
+import { LucideAngularModule, ChevronLeft, ChevronRight, Plus, Trash2, Save, Link, ArrowRight, Settings, GitBranch, LayoutTemplate } from 'lucide-angular';
 import { DockerNodeData, DockConnection } from '../../models/docker-node';
 
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { TemplateService, Template } from '../../services/template.service';
 
 @Component({
     selector: 'app-left-panel',
@@ -13,7 +14,9 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.compone
     templateUrl: './left-panel.component.html',
     styleUrls: ['./left-panel.component.css']
 })
-export class LeftPanelComponent {
+export class LeftPanelComponent implements OnInit {
+    private templateService = inject(TemplateService);
+
     @Input() nodes: DockerNodeData[] = [];
     @Input() connections: DockConnection[] = [];
     @Input() selectedConnectionId: string | null = null;
@@ -22,9 +25,10 @@ export class LeftPanelComponent {
     @Output() connectionUpdate = new EventEmitter<DockConnection>();
     @Output() connectionDelete = new EventEmitter<string>();
     @Output() connectionSelect = new EventEmitter<string>();
+    @Output() templateSelect = new EventEmitter<Template>();
 
     isOpen = signal(true);
-    activeTab = signal<'relations' | 'settings'>('relations');
+    activeTab = signal<'relations' | 'settings' | 'templates'>('relations');
 
     // Dialog State
     dialogVisible = false;
@@ -39,8 +43,30 @@ export class LeftPanelComponent {
         link: Link,
         arrowRight: ArrowRight,
         settings: Settings,
-        branch: GitBranch
+        branch: GitBranch,
+        template: LayoutTemplate
     };
+
+    templates = signal<Template[]>([]);
+
+    ngOnInit() {
+        this.templateService.getTemplates().subscribe({
+            next: (data) => this.templates.set(data),
+            error: (err) => console.error('Error loading templates', err)
+        });
+    }
+
+    onDragStart(event: DragEvent, template: Template) {
+        if (event.dataTransfer) {
+            event.dataTransfer.setData('application/json', JSON.stringify({ type: 'template-drop', ...template }));
+            event.dataTransfer.effectAllowed = 'copy';
+
+            const preview = document.getElementById('drag-preview');
+            if (preview) {
+                event.dataTransfer.setDragImage(preview, 90, 18);
+            }
+        }
+    }
 
     newConnSourceId = signal('');
     newConnTargetId = signal('');
@@ -61,9 +87,13 @@ export class LeftPanelComponent {
         this.isOpen.update(v => !v);
     }
 
-    selectTab(tab: 'relations' | 'settings') {
+    selectTab(tab: 'relations' | 'settings' | 'templates') {
         this.activeTab.set(tab);
         this.isOpen.set(true);
+    }
+
+    onTemplateSelect(template: Template) {
+        this.templateSelect.emit(template);
     }
 
     create() {

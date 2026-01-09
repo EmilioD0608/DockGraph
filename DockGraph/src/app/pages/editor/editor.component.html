@@ -50,7 +50,7 @@
         </app-left-panel>
 
 
-        <div class="canvas-container">
+        <div class="canvas-container" (dragover)="onDragOver($event)" (drop)="onDrop($event)">
             <app-canvas [nodes]="nodes()" [connections]="connections()" (nodeMove)="updateNode($event)"
                 [selectedConnectionId]="selectedConnectionId()" (nodeRightClick)="handleNodeContextMenu($event)"
                 (connectionCreated)="handleConnectionCreate($event)">

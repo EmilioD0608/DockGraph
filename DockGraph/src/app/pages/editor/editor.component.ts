@@ -579,6 +579,103 @@ export class EditorComponent {
         }
     }
 
+    onDragOver(event: DragEvent) {
+        event.preventDefault();
+    }
+
+    onDrop(event: DragEvent) {
+        event.preventDefault();
+        const dataStr = event.dataTransfer?.getData('application/json');
+        if (!dataStr) return;
+
+        try {
+            const data = JSON.parse(dataStr);
+            if (data.type === 'template-drop') {
+                const { clientX, clientY } = event;
+                const p = this.getCanvasPoint(clientX, clientY);
+                this.addTemplateNode(data, p.x, p.y);
+            }
+        } catch (e) {
+            console.error('Error parsing drop data', e);
+        }
+    }
+
+    private addTemplateNode(template: any, x: number, y: number) {
+        const config = { ...template.config };
+        const name = (template.name || 'Service').replace(/[^a-zA-Z0-9-]/g, '_');
+
+        const serviceNodeId = crypto.randomUUID();
+        const serviceNode: DockerNodeData = {
+            id: serviceNodeId,
+            type: 'service',
+            label: name,
+            x: x,
+            y: y,
+            inputs: [{ id: crypto.randomUUID(), type: 'dependency', dir: 'in', label: 'Dep In' }],
+            outputs: [
+                { id: crypto.randomUUID(), type: 'dependency', dir: 'out', label: 'Dep Out' },
+                { id: crypto.randomUUID(), type: 'volume', dir: 'out', label: 'Vol Out' },
+                { id: crypto.randomUUID(), type: 'network', dir: 'out', label: 'Net Out' }
+            ],
+            config: config
+        };
+
+        const newNodes: DockerNodeData[] = [serviceNode];
+        const newConns: DockConnection[] = [];
+
+        // Simple Auto-Creation of Volumes if specified in string format
+        if (Array.isArray(config.volumes)) {
+            const remainingVolumes: string[] = [];
+            let volOffset = 0;
+
+            config.volumes.forEach((vol: string) => {
+                if (typeof vol === 'string') {
+                    const parts = vol.split(':');
+                    const source = parts[0];
+                    const target = parts[1] || '';
+
+                    // If source doesn't resemble a path, assume named volume
+                    if (source && !source.includes('/') && !source.includes('.') && !source.includes('\\')) {
+                        const volNodeId = crypto.randomUUID();
+                        volOffset += 120;
+                        const volNode: DockerNodeData = {
+                            id: volNodeId,
+                            type: 'volume',
+                            label: source,
+                            x: x + 300,
+                            y: y + volOffset - 120, // Stack them
+                            inputs: [{ id: crypto.randomUUID(), type: 'volume', dir: 'in', label: 'Mount' }],
+                            outputs: [],
+                            config: { driver: 'local' }
+                        };
+                        newNodes.push(volNode);
+
+                        newConns.push({
+                            id: crypto.randomUUID(),
+                            sourceNodeId: serviceNodeId,
+                            sourceSocketId: serviceNode.outputs.find(s => s.type === 'volume')!.id,
+                            targetNodeId: volNodeId,
+                            targetSocketId: volNode.inputs[0].id
+                        });
+
+                        if (!serviceNode.config.volumeMounts) serviceNode.config.volumeMounts = {};
+                        serviceNode.config.volumeMounts[volNodeId] = target;
+                    } else {
+                        remainingVolumes.push(vol);
+                    }
+                } else {
+                    remainingVolumes.push(vol);
+                }
+            });
+
+            // Update config to only keep bind mounts (unmanaged)
+            serviceNode.config.volumes = remainingVolumes;
+        }
+
+        this.nodes.update(curr => [...curr, ...newNodes]);
+        this.connections.update(curr => [...curr, ...newConns]);
+    }
+
     onFileSelected(event: Event) {
         const input = event.target as HTMLInputElement;
         if (input.files?.length) {
