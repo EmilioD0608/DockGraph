@@ -102,12 +102,12 @@
 
 /* Specific Types */
 .node-volume {
-    width: 180px;
+    width: 200px;
     border-color: rgba(16, 185, 129, 0.3);
 }
 
 .node-network {
-    width: 180px;
+    width: 200px;
     border-color: rgba(59, 130, 246, 0.3);
 }
 
@@ -118,26 +118,38 @@
 }
 
 .node-header {
-    /* CAMBIO CLAVE: Altura fija y explícita para sincronizar con TS */
     height: 42px;
     box-sizing: border-box;
     /* Incluye padding/border en la altura */
-    padding: 0 12px;
-    /* Quitamos padding vertical, usamos align-items */
+    padding: 0;
+    /* Removed padding to allow full-width separate areas */
 
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     background: rgba(255, 255, 255, 0.02);
     border-radius: 8px 8px 0 0;
     border-top: 3px solid transparent;
 }
 
-.header-left {
+.header-icon-area {
+    width: 33.333%;
+    height: 100%;
     display: flex;
+    justify-content: center;
     align-items: center;
-    gap: 8px;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-title-area {
+    width: 66.666%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 8px;
+    overflow: hidden;
 }
 
 .node-icon {
@@ -151,6 +163,9 @@
 .node-title {
     font-size: 0.9rem;
     font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Socket Styles Helpers */
@@ -214,9 +229,21 @@
     height: 40px;
     margin-left: -15px;
     padding-left: 0;
-    gap: 20px;
+    gap: 32px;
     display: flex;
     align-items: center;
+    position: relative;
+}
+
+.service-socket:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 15px;
+    right: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    pointer-events: none;
 }
 
 /* Column 2: Indicators */
@@ -284,7 +311,7 @@
     justify-content: flex-end;
     padding-right: 0;
     margin-right: -14px;
-    gap: 20px;
+    gap: 32px;
     box-sizing: border-box;
     position: relative;
 }
@@ -294,7 +321,7 @@
     position: absolute;
     bottom: 0;
     left: 0;
-    right: 0;
+    right: 14px;
     height: 1px;
     background: rgba(255, 255, 255, 0.1);
     pointer-events: none;
@@ -306,15 +333,14 @@
 
 .node-volume,
 .node-network {
-    width: 160px;
-    /* SLightly narrower */
+    width: 200px;
 }
 
 /* Header Compacto */
 .node-volume .node-header,
 .node-network .node-header {
     height: 36px;
-    padding: 0 8px;
+    padding: 0;
     font-size: 0.8rem;
 }
 

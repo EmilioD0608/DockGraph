@@ -27,10 +27,12 @@
         (mousedown)="onNodeMouseDown($event, node)" (contextmenu)="onNodeContextMenu($event, node)">
 
         <div class="node-header" [style.border-top-color]="node.color">
-            <div class="header-left">
+            <div class="header-icon-area">
                 <lucide-icon *ngIf="node.type === 'service'" [img]="icons.server" class="node-icon"></lucide-icon>
                 <lucide-icon *ngIf="node.type === 'volume'" [img]="icons.db" class="node-icon"></lucide-icon>
                 <lucide-icon *ngIf="node.type === 'network'" [img]="icons.network" class="node-icon"></lucide-icon>
+            </div>
+            <div class="header-title-area">
                 <span class="node-title">{{ node.label }}</span>
             </div>
         </div>
