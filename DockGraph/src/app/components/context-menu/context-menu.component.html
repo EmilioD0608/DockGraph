@@ -7,6 +7,10 @@
             <span>Nuevo nodo</span>
             <lucide-icon [img]="icons.forward" class="icon-sm ml-auto"></lucide-icon>
         </button>
+        <button class="menu-item" (click)="onAction('select-area')">
+            <lucide-icon [img]="icons.scan" class="icon"></lucide-icon>
+            <span>Selección por área</span>
+        </button>
     </ng-container>
 
     <!-- Add Node Menu -->

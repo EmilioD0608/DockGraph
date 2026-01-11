@@ -44,6 +44,129 @@ async function main() {
                 depends_on: ['postgres-db'],
                 restart: 'always'
             },
+        },
+        {
+            name: 'Secure Node/Angular Stack',
+            description: 'Angular frontend (public), Node.js backend (internal), PostgreSQL (internal).',
+            category: 'Stack',
+            config: {
+                services: {
+                    frontend: {
+                        image: 'my-angular-app:latest',
+                        ports: ['80:80'],
+                        networks: ['public_net', 'internal_net'],
+                        depends_on: ['backend'],
+                        restart: 'always'
+                    },
+                    backend: {
+                        image: 'my-node-app:latest',
+                        networks: ['internal_net'],
+                        environment: {
+                            DB_HOST: 'db',
+                            DB_PORT: '5432',
+                            DB_User: 'admin',
+                            DB_PASS: 'securepass'
+                        },
+                        depends_on: ['db'],
+                        restart: 'always'
+                    },
+                    db: {
+                        image: 'postgres:15-alpine',
+                        networks: ['internal_net'],
+                        environment: {
+                            POSTGRES_USER: 'admin',
+                            POSTGRES_PASSWORD: 'securepass',
+                            POSTGRES_DB: 'app_db'
+                        },
+                        volumes: ['db_data:/var/lib/postgresql/data'],
+                        restart: 'always'
+                    }
+                },
+                networks: {
+                    public_net: {
+                        driver: 'bridge'
+                    },
+                    internal_net: {
+                        internal: true
+                    }
+                },
+                volumes: {
+                    db_data: {}
+                }
+            }
+        },
+        {
+            name: 'Python API & Angular',
+            description: 'Angular Frontend connected to a Python API and PostgreSQL database.',
+            category: 'Stack',
+            config: {
+                services: {
+                    frontend: {
+                        image: 'angular-front:latest',
+                        ports: ['4200:80'],
+                        networks: ['app_net'],
+                        depends_on: ['api']
+                    },
+                    api: {
+                        image: 'python-api:3.9',
+                        networks: ['app_net'],
+                        environment: {
+                            DATABASE_URL: 'postgresql://user:pass@db:5432/mydb'
+                        },
+                        depends_on: ['db']
+                    },
+                    db: {
+                        image: 'postgres:15',
+                        networks: ['app_net'],
+                        environment: {
+                            POSTGRES_USER: 'user',
+                            POSTGRES_PASSWORD: 'pass',
+                            POSTGRES_DB: 'mydb'
+                        },
+                        volumes: ['pg_data:/var/lib/postgresql/data']
+                    }
+                },
+                networks: {
+                    app_net: {}
+                },
+                volumes: {
+                    pg_data: {}
+                }
+            }
+        },
+        {
+            name: 'MERN Stack',
+            description: 'Fullstack MongoDB, Express, React, Node.js application.',
+            category: 'Stack',
+            config: {
+                services: {
+                    client: {
+                        image: 'react-app:latest',
+                        ports: ['3000:3000'],
+                        depends_on: ['server'],
+                        networks: ['mern_net']
+                    },
+                    server: {
+                        image: 'express-api:latest',
+                        environment: {
+                            MONGO_URI: 'mongodb://mongo:27017/mern_db'
+                        },
+                        depends_on: ['mongo'],
+                        networks: ['mern_net']
+                    },
+                    mongo: {
+                        image: 'mongo:6.0',
+                        volumes: ['mongo_data:/data/db'],
+                        networks: ['mern_net']
+                    }
+                },
+                volumes: {
+                    mongo_data: {}
+                },
+                networks: {
+                    mern_net: {}
+                }
+            }
         }
     ];
 

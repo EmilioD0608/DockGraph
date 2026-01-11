@@ -1,6 +1,7 @@
-import { Component, signal, HostListener, ViewChild, effect, computed, ElementRef } from '@angular/core';
+import { Component, signal, HostListener, ViewChild, effect, computed, ElementRef, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule, Download, Upload } from 'lucide-angular';
+import { FormsModule } from '@angular/forms';
+import { LucideAngularModule, Download, Upload, Plus } from 'lucide-angular';
 import * as yaml from 'js-yaml';
 
 import { Canvas } from '../../components/canvas/canvas';
@@ -13,18 +14,27 @@ import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-
 @Component({
     selector: 'app-editor',
     standalone: true,
-    imports: [CommonModule, LucideAngularModule, Canvas, ContextMenuComponent, NodeEditorComponent, LeftPanelComponent, ConfirmDialogComponent],
+    imports: [CommonModule, FormsModule, LucideAngularModule, Canvas, ContextMenuComponent, NodeEditorComponent, LeftPanelComponent, ConfirmDialogComponent],
     templateUrl: './editor.component.html',
     styleUrl: './editor.component.css'
 })
-export class EditorComponent {
+export class EditorComponent implements OnInit {
     @ViewChild(Canvas) canvasRef!: Canvas;
 
-    readonly icons = { download: Download, upload: Upload };
+    readonly icons = { download: Download, upload: Upload, plus: Plus };
 
     isMenuOpen = signal(false);
     isImportModalOpen = signal(false);
     isDarkMode = signal(true);
+
+    // Project System Signals
+    isProjectModalOpen = signal(false);
+    isNewProjectWarningOpen = signal(false);
+
+    projectData = signal({
+        name: '',
+        tech: 'docker-compose'
+    });
 
     nodes = signal<DockerNodeData[]>([]);
     connections = signal<DockConnection[]>([]);
@@ -52,6 +62,7 @@ export class EditorComponent {
     constructor() {
         const savedNodes = localStorage.getItem('dockgraph-nodes');
         const savedConns = localStorage.getItem('dockgraph-connections');
+        const savedProject = localStorage.getItem('dockgraph-project');
 
         if (savedNodes) {
             try { this.nodes.set(JSON.parse(savedNodes)); } catch (e) { console.error(e); }
@@ -60,11 +71,67 @@ export class EditorComponent {
             try { this.connections.set(JSON.parse(savedConns)); } catch (e) { console.error(e); }
         }
 
+        if (savedProject) {
+            try {
+                const proj = JSON.parse(savedProject);
+                this.projectData.set(proj);
+            } catch (e) { console.error(e); }
+        }
+
         effect(() => {
             localStorage.setItem('dockgraph-nodes', JSON.stringify(this.nodes()));
             localStorage.setItem('dockgraph-connections', JSON.stringify(this.connections()));
+            localStorage.setItem('dockgraph-project', JSON.stringify(this.projectData()));
         });
     }
+
+    ngOnInit() {
+        // If no project name is set, show the creation modal at start
+        if (!this.projectData().name) {
+            this.isProjectModalOpen.set(true);
+        }
+    }
+
+    // Project System Methods
+    openNewProjectWarning() {
+        this.isNewProjectWarningOpen.set(true);
+    }
+
+    cancelNewProject() {
+        this.isNewProjectWarningOpen.set(false);
+    }
+
+    updateProjectName(name: string) {
+        this.projectData.update(current => ({ ...current, name }));
+    }
+
+    setProjectTech(tech: string) {
+        this.projectData.update(current => ({ ...current, tech }));
+    }
+
+
+    confirmNewProject() {
+        this.isNewProjectWarningOpen.set(false);
+        // Reset form
+        this.projectData.set({ name: '', tech: 'docker-compose' });
+        this.isProjectModalOpen.set(true);
+    }
+
+    createProject() {
+        if (!this.projectData().name) return;
+
+        // Clear current canvas
+        this.nodes.set([]);
+        this.connections.set([]);
+        this.selectedConnectionId.set(null);
+        this.editingNode.set(null);
+
+        // Close modal
+        this.isProjectModalOpen.set(false);
+
+        // LocalStorage will be updated by effect
+    }
+
 
     toggleMenu() {
         this.isMenuOpen.update(value => !value);
@@ -129,6 +196,9 @@ export class EditorComponent {
         if (action === 'add-node:service') {
             this.addServiceNode(x, y);
         }
+        else if (action === 'select-area') {
+            this.canvasRef.startAreaSelection();
+        }
         else if (action === 'add-node:volume') {
             this.addVolumeNode(x, y);
         }
@@ -137,9 +207,26 @@ export class EditorComponent {
         }
         else if (action === 'delete-node') {
             if (data?.nodeId) {
-                this.nodes.update(curr => curr.filter(n => n.id !== data.nodeId));
-                // Remove connections attached to this node
-                this.connections.update(curr => curr.filter(c => c.sourceNodeId !== data.nodeId && c.targetNodeId !== data.nodeId));
+                const selectedIds = this.canvasRef.selectedNodeIds();
+                const nodesToDelete = new Set<string>();
+
+                if (selectedIds.has(data.nodeId)) {
+                    // Si el nodo clickeado está en la selección, borramos TODOS los seleccionados
+                    selectedIds.forEach(id => nodesToDelete.add(id));
+                } else {
+                    // Si no, borramos solo ese
+                    nodesToDelete.add(data.nodeId);
+                }
+
+                this.nodes.update(curr => curr.filter(n => !nodesToDelete.has(n.id)));
+
+                // Eliminar conexiones de cualquiera de los nodos borrados
+                this.connections.update(curr => curr.filter(c =>
+                    !nodesToDelete.has(c.sourceNodeId) && !nodesToDelete.has(c.targetNodeId)
+                ));
+
+                // Limpiar selección
+                this.canvasRef.selectedNodeIds.set(new Set());
             }
         }
         else if (action === 'edit-node') {
@@ -546,7 +633,9 @@ export class EditorComponent {
             });
         }
 
-        this.downloadFile('docker-compose.yaml', yaml);
+        const projectName = this.projectData().name || 'docker-compose';
+        const filename = projectName.endsWith('.yaml') || projectName.endsWith('.yml') ? projectName : `${projectName}.yaml`;
+        this.downloadFile(filename, yaml);
     }
 
     openImportModal() {
@@ -601,6 +690,11 @@ export class EditorComponent {
     }
 
     private addTemplateNode(template: any, x: number, y: number) {
+        if (template.category === 'Stack' || (template.config && template.config.services)) {
+            this.addStackTemplate(template.config, x, y);
+            return;
+        }
+
         const config = { ...template.config };
         const name = (template.name || 'Service').replace(/[^a-zA-Z0-9-]/g, '_');
 
@@ -674,6 +768,201 @@ export class EditorComponent {
 
         this.nodes.update(curr => [...curr, ...newNodes]);
         this.connections.update(curr => [...curr, ...newConns]);
+    }
+
+    private addStackTemplate(data: any, startX: number, startY: number) {
+        if (!data || !data.services) return;
+
+        const newNodes: DockerNodeData[] = [];
+        const newConnections: DockConnection[] = [];
+        const serviceMap = new Map<string, string>(); // ServiceName -> NodeID
+
+        let yOffset = startY;
+        const xServices = startX;
+        const xResources = startX + 400;
+
+        let volY = startY;
+        let netY = startY + 200; // rough start
+
+        // 1. Create Service Nodes
+        for (const [name, svc] of Object.entries(data.services) as [string, any][]) {
+            const nodeId = crypto.randomUUID();
+            serviceMap.set(name, nodeId);
+
+            const config: any = {
+                restart: svc.restart,
+                container_name: svc.container_name,
+                environment: svc.environment,
+                ports: svc.ports,
+                expose: svc.expose,
+                volumes: [], // Bind mounts only
+                volumeMounts: {} // Map VolumeID -> TargetPath
+            };
+
+            if (svc.build) {
+                if (typeof svc.build === 'string') {
+                    config.build = { context: svc.build };
+                } else {
+                    config.build = { ...svc.build };
+                }
+            } else {
+                config.image = svc.image;
+            }
+
+            if (svc.deploy?.resources?.limits) {
+                config.deploy = { resources: { limits: { ...svc.deploy.resources.limits } } };
+            }
+
+            if (svc.healthcheck) {
+                config.healthcheck = { ...svc.healthcheck };
+            }
+
+            newNodes.push({
+                id: nodeId, type: 'service', label: name, x: xServices, y: yOffset,
+                inputs: [{ id: crypto.randomUUID(), type: 'dependency', dir: 'in', label: 'Dep In' }],
+                outputs: [
+                    { id: crypto.randomUUID(), type: 'dependency', dir: 'out', label: 'Dep Out' },
+                    { id: crypto.randomUUID(), type: 'volume', dir: 'out', label: 'Vol Out' },
+                    { id: crypto.randomUUID(), type: 'network', dir: 'out', label: 'Net Out' }
+                ],
+                config
+            });
+
+            yOffset += 180;
+        }
+
+        // Adjust Vol/Net Y start to avoid overlapping with services if resources are placed below? 
+        // We place resources to the RIGHT (xResources).
+
+        const volumeMap = new Map<string, string>(); // VolName -> NodeID
+
+        if (data.volumes) {
+            for (const [name, vol] of Object.entries(data.volumes) as [string, any][]) {
+                const nodeId = crypto.randomUUID();
+                volumeMap.set(name, nodeId);
+                const volConfig = vol || {};
+
+                newNodes.push({
+                    id: nodeId, type: 'volume', label: name, x: xResources, y: volY,
+                    inputs: [{ id: crypto.randomUUID(), type: 'volume', dir: 'in', label: 'Mount' }],
+                    outputs: [],
+                    config: {
+                        driver: volConfig.driver,
+                        external: volConfig.external,
+                        driverOpts: volConfig.driver_opts,
+                        name: volConfig.name
+                    }
+                });
+                volY += 120;
+            }
+        }
+
+        const networkMap = new Map<string, string>();
+        if (data.networks) {
+            // Start networks below volumes
+            netY = Math.max(netY, volY);
+
+            for (const [name, net] of Object.entries(data.networks) as [string, any][]) {
+                const nodeId = crypto.randomUUID();
+                networkMap.set(name, nodeId);
+                const netConfig = net || {};
+                const ipam = netConfig.ipam?.config?.[0];
+
+                newNodes.push({
+                    id: nodeId, type: 'network', label: name, x: xResources, y: netY,
+                    inputs: [{ id: crypto.randomUUID(), type: 'network', dir: 'in', label: 'Member' }],
+                    outputs: [],
+                    config: {
+                        driver: netConfig.driver,
+                        external: netConfig.external?.name ? true : (netConfig.external || false),
+                        internal: netConfig.internal,
+                        ipam: ipam ? { subnet: ipam.subnet, gateway: ipam.gateway } : undefined
+                    }
+                });
+                netY += 120;
+            }
+        }
+
+        // 4. Connect Services
+        for (const [name, svc] of Object.entries(data.services) as [string, any][]) {
+            const sourceId = serviceMap.get(name)!;
+            const sourceNode = newNodes.find(n => n.id === sourceId)!;
+
+            // Depends On
+            if (svc.depends_on) {
+                const deps = Array.isArray(svc.depends_on) ? svc.depends_on : Object.keys(svc.depends_on);
+                deps.forEach((depName: string) => {
+                    const targetId = serviceMap.get(depName);
+                    if (targetId) {
+                        const targetNode = newNodes.find(n => n.id === targetId)!;
+                        newConnections.push({
+                            id: crypto.randomUUID(),
+                            sourceNodeId: sourceId,
+                            sourceSocketId: sourceNode.outputs.find(s => s.type === 'dependency')!.id,
+                            targetNodeId: targetId,
+                            targetSocketId: targetNode.inputs.find(s => s.type === 'dependency')!.id
+                        });
+                    }
+                });
+            }
+
+            // Networks
+            if (svc.networks) {
+                const nets = Array.isArray(svc.networks) ? svc.networks : Object.keys(svc.networks);
+                nets.forEach((netName: string) => {
+                    const targetId = networkMap.get(netName);
+                    if (targetId) {
+                        const targetNode = newNodes.find(n => n.id === targetId)!;
+                        newConnections.push({
+                            id: crypto.randomUUID(),
+                            sourceNodeId: sourceId,
+                            sourceSocketId: sourceNode.outputs.find(s => s.type === 'network')!.id,
+                            targetNodeId: targetId,
+                            targetSocketId: targetNode.inputs.find(s => s.type === 'network')!.id
+                        });
+                    }
+                });
+            }
+
+            // Volumes
+            if (svc.volumes) {
+                svc.volumes.forEach((volStr: string | any) => {
+                    let source = '';
+                    let target = '';
+
+                    if (typeof volStr === 'string') {
+                        const parts = volStr.split(':');
+                        source = parts[0];
+                        target = parts.length > 1 ? parts[1] : '';
+                    } else {
+                        source = volStr.source;
+                        target = volStr.target;
+                    }
+
+                    const targetId = volumeMap.get(source);
+                    if (targetId) {
+                        const targetNode = newNodes.find(n => n.id === targetId)!;
+                        newConnections.push({
+                            id: crypto.randomUUID(),
+                            sourceNodeId: sourceId,
+                            sourceSocketId: sourceNode.outputs.find(s => s.type === 'volume')!.id,
+                            targetNodeId: targetId,
+                            targetSocketId: targetNode.inputs.find(s => s.type === 'volume')!.id
+                        });
+
+                        if (!sourceNode.config.volumeMounts) sourceNode.config.volumeMounts = {};
+                        sourceNode.config.volumeMounts[targetId] = target;
+
+                    } else {
+                        if (!sourceNode.config.volumes) sourceNode.config.volumes = [];
+                        sourceNode.config.volumes.push(volStr);
+                    }
+                });
+            }
+        }
+
+        this.nodes.update(curr => [...curr, ...newNodes]);
+        this.connections.update(curr => [...curr, ...newConnections]);
     }
 
     onFileSelected(event: Event) {

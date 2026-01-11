@@ -21,10 +21,15 @@
             [attr.stroke]="drag.color" stroke-width="2" stroke-dasharray="5,5" fill="none" />
     </svg>
 
+    <div class="selection-box" *ngIf="selectionBox()" [style.left.px]="selectionBox()!.x"
+        [style.top.px]="selectionBox()!.y" [style.width.px]="selectionBox()!.w" [style.height.px]="selectionBox()!.h">
+    </div>
+
     @for (node of nodes; track node.id) {
     <div class="node-card" [class.node-volume]="node.type === 'volume'" [class.node-network]="node.type === 'network'"
-        [style.left.px]="Math.round(node.x)" [style.top.px]="Math.round(node.y)"
-        (mousedown)="onNodeMouseDown($event, node)" (contextmenu)="onNodeContextMenu($event, node)">
+        [class.selected]="selectedNodeIds().has(node.id)" [style.left.px]="Math.round(node.x)"
+        [style.top.px]="Math.round(node.y)" (mousedown)="onNodeMouseDown($event, node)"
+        (contextmenu)="onNodeContextMenu($event, node)">
 
         <div class="node-header" [style.border-top-color]="node.color">
             <div class="header-icon-area">

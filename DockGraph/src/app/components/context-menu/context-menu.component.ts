@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule, PlusCircle, Search, ArrowLeft, ChevronRight, Box, Trash2, Edit, Server, Database, Network } from 'lucide-angular';
+import { LucideAngularModule, PlusCircle, Search, ArrowLeft, ChevronRight, Box, Trash2, Edit, Server, Database, Network, Scan } from 'lucide-angular';
 
 @Component({
     selector: 'app-context-menu',
@@ -31,7 +31,8 @@ export class ContextMenuComponent {
         edit: Edit,
         server: Server,
         db: Database,
-        network: Network
+        network: Network,
+        scan: Scan
     };
 
     onAction(actionName: string) {

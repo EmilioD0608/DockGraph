@@ -1,9 +1,15 @@
 <div class="page-container" [class.dark-mode]="isDarkMode()">
     <header class="glass-banner">
-        <div class="logo">DockGraph</div>
+        <div class="logo">
+            DockGraph
+            <span class="project-name" *ngIf="projectData().name">/ {{ projectData().name }}</span>
+        </div>
         <div class="menu-container">
             <button class="action-btn" (click)="exportYaml()" title="Export Docker Compose">
                 <lucide-icon [img]="icons.download" [size]="20"></lucide-icon>
+            </button>
+            <button class="action-btn" (click)="openNewProjectWarning()" title="Nuevo Proyecto">
+                <lucide-icon [img]="icons.plus" [size]="20"></lucide-icon>
             </button>
 
             <button class="action-btn" (click)="toggleMenu()" aria-label="Toggle menu">
@@ -83,4 +89,46 @@
             </div>
         </div>
     </div>
+
+    <!-- Project Creation Modal -->
+    <div class="modal-overlay" *ngIf="isProjectModalOpen()">
+        <div class="modal-content glass-panel">
+            <h3>Nuevo Proyecto</h3>
+            <div class="form-container">
+                <div class="form-group">
+                    <label>Nombre del Proyecto</label>
+                    <input type="text" [ngModel]="projectData().name" (ngModelChange)="updateProjectName($event)"
+                        placeholder="Mi Proyecto Increíble" class="input-field">
+                </div>
+
+                <div class="form-group">
+                    <label>Tecnología</label>
+                    <div class="tech-options">
+                        <div class="tech-option" [class.selected]="projectData().tech === 'docker-compose'"
+                            (click)="setProjectTech('docker-compose')">
+                            <span class="tech-icon">🐳</span>
+                            <span style="font-weight: 500;">Docker Compose</span>
+                            <div class="check-circle" *ngIf="projectData().tech === 'docker-compose'"></div>
+                        </div>
+                        <div class="tech-option disabled">
+                            <span class="tech-icon">☸️</span>
+                            <span>Kubernetes</span>
+                            <span class="tag">Pronto</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="cta-button full-width" [disabled]="!projectData().name" (click)="createProject()">
+                    Crear Lienzo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Project Warning Dialog -->
+    <app-confirm-dialog [visible]="isNewProjectWarningOpen()" title="Iniciar Nuevo Proyecto"
+        message="Esto eliminará el proyecto actual y borrará todos los datos locales. ¿Estás seguro de continuar?"
+        confirmText="Sí, crear nuevo" cancelText="Cancelar" (confirm)="confirmNewProject()"
+        (cancel)="cancelNewProject()">
+    </app-confirm-dialog>
 </div>
