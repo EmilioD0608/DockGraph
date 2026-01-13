@@ -1,8 +1,9 @@
-import { Component, EventEmitter, Input, Output, signal, effect, computed } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal, effect, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { LucideAngularModule, X, Save, ChevronDown } from 'lucide-angular';
 import { DockerNodeData } from '../../models/docker-node';
+import { LanguageService } from '../../services/language.service';
 
 @Component({
     // ...
@@ -13,6 +14,8 @@ import { DockerNodeData } from '../../models/docker-node';
     styleUrls: ['./node-editor.component.css']
 })
 export class NodeEditorComponent {
+    public languageService = inject(LanguageService);
+
     @Input() node: DockerNodeData | null = null;
     @Input() connectedVolumes: { id: string, label: string }[] = [];
     @Output() close = new EventEmitter<void>();
@@ -63,8 +66,15 @@ export class NodeEditorComponent {
             buildDockerfile: [''],
             useBuild: [false], // UI toggle
             containerName: [''],
+            stdin_open: [false],
+            tty: [false],
             cpuLimit: [''],
-            memLimit: ['']
+            memLimit: [''],
+            hcTest: [''],
+            hcInterval: [''],
+            hcTimeout: [''],
+            hcRetries: [''],
+            hcStartPeriod: ['']
         });
 
         effect(() => {
@@ -87,8 +97,15 @@ export class NodeEditorComponent {
                     buildContext: this.node.config.build?.context || '.',
                     buildDockerfile: this.node.config.build?.dockerfile || '',
                     containerName: this.node.config.container_name || '',
+                    stdin_open: !!this.node.config.stdin_open,
+                    tty: !!this.node.config.tty,
                     cpuLimit: this.node.config.deploy?.resources?.limits?.cpus || '',
-                    memLimit: this.node.config.deploy?.resources?.limits?.memory || ''
+                    memLimit: this.node.config.deploy?.resources?.limits?.memory || '',
+                    hcTest: this.parseHealthTest(this.node.config.healthcheck?.test),
+                    hcInterval: this.node.config.healthcheck?.interval || '',
+                    hcTimeout: this.node.config.healthcheck?.timeout || '',
+                    hcRetries: this.node.config.healthcheck?.retries || '',
+                    hcStartPeriod: this.node.config.healthcheck?.start_period || ''
                 });
 
                 // Parse Ports
@@ -155,8 +172,15 @@ export class NodeEditorComponent {
                 buildContext: this.node.config.build?.context || '.',
                 buildDockerfile: this.node.config.build?.dockerfile || '',
                 containerName: this.node.config.container_name || '',
+                stdin_open: !!this.node.config.stdin_open,
+                tty: !!this.node.config.tty,
                 cpuLimit: this.node.config.deploy?.resources?.limits?.cpus || '',
-                memLimit: this.node.config.deploy?.resources?.limits?.memory || ''
+                memLimit: this.node.config.deploy?.resources?.limits?.memory || '',
+                hcTest: this.parseHealthTest(this.node.config.healthcheck?.test),
+                hcInterval: this.node.config.healthcheck?.interval || '',
+                hcTimeout: this.node.config.healthcheck?.timeout || '',
+                hcRetries: this.node.config.healthcheck?.retries || '',
+                hcStartPeriod: this.node.config.healthcheck?.start_period || ''
             });
 
             // Parse Ports
@@ -216,6 +240,16 @@ export class NodeEditorComponent {
     updateContainerPort(index: number, event: Event) {
         const input = event.target as HTMLInputElement;
         this.portEntries[index].containerPort = input.value;
+    }
+
+    private parseHealthTest(test: string[] | undefined): string {
+        if (!test || test.length === 0) return '';
+        // If CMD-SHELL, return the command string (index 1)
+        if (test[0] === 'CMD-SHELL' && test.length > 1) return test[1];
+        // If CMD (exec), join them to look like shell command
+        if (test[0] === 'CMD') return test.slice(1).join(' ');
+        // Fallback
+        return test.join(' ');
     }
 
 
@@ -366,6 +400,10 @@ export class NodeEditorComponent {
 
             // Container Name
             if (formVal.containerName) newConfig.container_name = formVal.containerName;
+
+            // Interactive Mode
+            newConfig.stdin_open = formVal.stdin_open || undefined;
+            newConfig.tty = formVal.tty || undefined;
 
             // Resources
             if (formVal.cpuLimit || formVal.memLimit) {

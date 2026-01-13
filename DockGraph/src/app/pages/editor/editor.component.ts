@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Download, Upload, Plus } from 'lucide-angular';
 import * as yaml from 'js-yaml';
 
-import { Canvas } from '../../components/canvas/canvas';
+import { CanvasComponent } from '../../components/canvas/canvas';
 import { ContextMenuComponent } from '../../components/context-menu/context-menu.component';
 import { NodeEditorComponent } from '../../components/node-editor/node-editor.component';
 import { LeftPanelComponent } from '../../components/left-panel/left-panel.component';
@@ -14,12 +14,12 @@ import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-
 @Component({
     selector: 'app-editor',
     standalone: true,
-    imports: [CommonModule, FormsModule, LucideAngularModule, Canvas, ContextMenuComponent, NodeEditorComponent, LeftPanelComponent, ConfirmDialogComponent],
+    imports: [CommonModule, FormsModule, LucideAngularModule, CanvasComponent, ContextMenuComponent, NodeEditorComponent, LeftPanelComponent, ConfirmDialogComponent],
     templateUrl: './editor.component.html',
     styleUrl: './editor.component.css'
 })
 export class EditorComponent implements OnInit {
-    @ViewChild(Canvas) canvasRef!: Canvas;
+    @ViewChild(CanvasComponent) canvasRef!: CanvasComponent;
 
     readonly icons = { download: Download, upload: Upload, plus: Plus };
 
@@ -212,7 +212,7 @@ export class EditorComponent implements OnInit {
 
                 if (selectedIds.has(data.nodeId)) {
                     // Si el nodo clickeado está en la selección, borramos TODOS los seleccionados
-                    selectedIds.forEach(id => nodesToDelete.add(id));
+                    selectedIds.forEach((id: string) => nodesToDelete.add(id));
                 } else {
                     // Si no, borramos solo ese
                     nodesToDelete.add(data.nodeId);
@@ -443,6 +443,9 @@ export class EditorComponent implements OnInit {
                     svc.healthcheck = { ...node.config.healthcheck };
                 }
 
+                if (node.config.stdin_open) svc.stdin_open = true;
+                if (node.config.tty) svc.tty = true;
+
                 services[name] = svc;
             } else if (node.type === 'volume') {
                 volumes.add(name);
@@ -462,9 +465,22 @@ export class EditorComponent implements OnInit {
 
             // Service -> Service (Depends On)
             if (sourceNode.type === 'service' && targetNode.type === 'service') {
-                if (!services[sourceName].depends_on) services[sourceName].depends_on = [];
-                if (!services[sourceName].depends_on.includes(targetName)) {
-                    services[sourceName].depends_on.push(targetName);
+                if (!services[sourceName].depends_on) services[sourceName].depends_on = {};
+
+                // Check for specific condition in node config (stored by name or id?)
+                // Since we don't have connection metadata storage yet, we check if the config has it
+                // We use title/name reference if possible, but our internal config uses IDs? 
+                // Actually, let's assume valid config.depends_on keyed by service name (which we know now)
+
+                // But wait, the config depends_on usually stores keys as they appeared in import/template.
+                // Let's try to look up if there is a condition for this target
+                const condition = sourceNode.config.depends_on?.[targetName]?.condition ||
+                    sourceNode.config.depends_on?.[targetNode.label]?.condition;
+
+                if (condition) {
+                    services[sourceName].depends_on[targetName] = { condition };
+                } else {
+                    services[sourceName].depends_on[targetName] = { condition: 'service_started' };
                 }
             }
 
@@ -491,7 +507,7 @@ export class EditorComponent implements OnInit {
         });
 
         // 4. Construct YAML
-        let yaml = 'version: "3.8"\n\n';
+        let yaml = '';
 
         // Services
         if (Object.keys(services).length > 0) {
@@ -528,7 +544,9 @@ export class EditorComponent implements OnInit {
                     // Check if test is array or string, but we saved it as array ["CMD-SHELL", "cmd"]
                     const testCmd = (svc as any).healthcheck.test;
                     if (Array.isArray(testCmd)) {
-                        yaml += `      test: ["${testCmd[0]}", "${testCmd[1]}"]\n`;
+                        // Properly format array as ["CMD", "arg1", ...]
+                        const formatted = testCmd.map(t => `"${t}"`).join(', ');
+                        yaml += `      test: [${formatted}]\n`;
                     } else {
                         yaml += `      test: ${testCmd}\n`;
                     }
@@ -539,6 +557,8 @@ export class EditorComponent implements OnInit {
                 }
 
                 if ((svc as any).restart) yaml += `    restart: ${(svc as any).restart}\n`;
+                if ((svc as any).stdin_open) yaml += `    stdin_open: true\n`;
+                if ((svc as any).tty) yaml += `    tty: true\n`;
 
                 if ((svc as any).ports) {
                     yaml += `    ports:\n`;
@@ -560,7 +580,26 @@ export class EditorComponent implements OnInit {
                 }
                 if ((svc as any).depends_on) {
                     yaml += `    depends_on:\n`;
-                    (svc as any).depends_on.forEach((d: string) => yaml += `      - ${d}\n`);
+                    const deps = (svc as any).depends_on;
+                    // Check if it's object or array (our construction above makes it object)
+                    if (Array.isArray(deps)) {
+                        deps.forEach((d: string) => yaml += `      - ${d}\n`);
+                    } else {
+                        for (const [depName, config] of Object.entries(deps)) {
+                            // If condition is basic 'service_started', we can output short syntax? 
+                            // Or just always use long syntax for consistency if mixed? 
+                            // Let's check complexity.
+                            if ((config as any).condition === 'service_started') {
+                                // Short syntax allowed if ALL are simple? No, mixed is tricky.
+                                // Safe to just use long syntax always if object
+                                yaml += `      ${depName}:\n`;
+                                yaml += `        condition: service_started\n`;
+                            } else {
+                                yaml += `      ${depName}:\n`;
+                                yaml += `        condition: ${(config as any).condition}\n`;
+                            }
+                        }
+                    }
                 }
                 if ((svc as any).networks) {
                     yaml += `    networks:\n`;
@@ -795,9 +834,17 @@ export class EditorComponent implements OnInit {
                 environment: svc.environment,
                 ports: svc.ports,
                 expose: svc.expose,
+                stdin_open: !!svc.stdin_open,
+                tty: !!svc.tty,
                 volumes: [], // Bind mounts only
-                volumeMounts: {} // Map VolumeID -> TargetPath
+                volumeMounts: {}, // Map VolumeID -> TargetPath
+                depends_on: {} // Metada storage
             };
+
+            // Preserve depends_on conditions
+            if (svc.depends_on && !Array.isArray(svc.depends_on)) {
+                config.depends_on = svc.depends_on;
+            }
 
             if (svc.build) {
                 if (typeof svc.build === 'string') {
@@ -1031,6 +1078,15 @@ export class EditorComponent implements OnInit {
                 // Healthcheck
                 if (svc.healthcheck) {
                     config.healthcheck = { ...svc.healthcheck };
+                }
+
+                // Interactive
+                if (svc.stdin_open) config.stdin_open = true;
+                if (svc.tty) config.tty = true;
+
+                // Persist depends_on metadata
+                if (svc.depends_on && !Array.isArray(svc.depends_on)) {
+                    config.depends_on = svc.depends_on;
                 }
 
                 newNodes.push({

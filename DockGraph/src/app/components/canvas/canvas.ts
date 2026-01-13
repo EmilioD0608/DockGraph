@@ -1,17 +1,22 @@
-import { Component, signal, HostListener, HostBinding, Input, Output, EventEmitter, ElementRef } from '@angular/core';
+import { Component, ElementRef, ViewChild, signal, computed, effect, inject, HostListener, HostBinding, Input, Output, EventEmitter, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule, Box, Server, Database, Network, Layers, Globe, Hammer, Lock } from 'lucide-angular';
-
+import { LucideAngularModule, Server, Database, Network, Globe, Hammer, Lock, Box, Layers } from 'lucide-angular';
 import { DockerNodeData, DockConnection, Socket } from '../../models/docker-node';
+import { LanguageService } from '../../services/language.service';
+import { MiniMapComponent } from './mini-map/mini-map.component';
 
 @Component({
   selector: 'app-canvas',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule, MiniMapComponent],
   templateUrl: './canvas.html',
   styleUrls: ['./canvas.css'],
 })
-export class Canvas {
+export class CanvasComponent implements AfterViewInit {
+  public languageService = inject(LanguageService);
+
+  @ViewChild('canvasContainer') container!: ElementRef;
+
   @Input() nodes: DockerNodeData[] = [];
   @Input() connections: DockConnection[] = [];
   @Output() nodeMove = new EventEmitter<DockerNodeData>();
@@ -37,7 +42,23 @@ export class Canvas {
   private startPosition = { x: 0, y: 0 };
   private initialTransform = { x: 0, y: 0 };
 
+  canvasSize = signal({ width: 0, height: 0 });
+
   constructor(private elementRef: ElementRef) { }
+
+  ngAfterViewInit() {
+    this.updateCanvasSize();
+  }
+
+  @HostListener('window:resize')
+  onResize() {
+    this.updateCanvasSize();
+  }
+
+  updateCanvasSize() {
+    const el = this.elementRef.nativeElement;
+    this.canvasSize.set({ width: el.clientWidth, height: el.clientHeight });
+  }
 
   getSocketIcon(type: string): any {
     switch (type) {
@@ -82,9 +103,11 @@ export class Canvas {
     this.isSelectionActive = true;
   }
 
+  @HostBinding('style.cursor')
   get cursor() {
     if (this.isSelectionActive) return 'crosshair';
-    return this.isDraggingCanvas() ? 'grabbing' : 'grab';
+    if (this.isDraggingCanvas() || this.activeNodeId) return 'grabbing';
+    return 'grab';
   }
 
   @HostListener('mousedown', ['$event'])

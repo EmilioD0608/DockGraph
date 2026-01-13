@@ -4,12 +4,12 @@
     <ng-container *ngIf="view() === 'main'">
         <button class="menu-item" (click)="setView('add-node')">
             <lucide-icon [img]="icons.plus" class="icon"></lucide-icon>
-            <span>Nuevo nodo</span>
+            <span>{{ languageService.dictionary().CONTEXT_MENU.NEW_NODE }}</span>
             <lucide-icon [img]="icons.forward" class="icon-sm ml-auto"></lucide-icon>
         </button>
         <button class="menu-item" (click)="onAction('select-area')">
             <lucide-icon [img]="icons.scan" class="icon"></lucide-icon>
-            <span>Selección por área</span>
+            <span>{{ languageService.dictionary().CONTEXT_MENU.AREA_SELECTION }}</span>
         </button>
     </ng-container>
 
@@ -19,31 +19,32 @@
             <button class="icon-btn" (click)="setView('main')">
                 <lucide-icon [img]="icons.back" class="icon-sm"></lucide-icon>
             </button>
-            <span class="header-title">Añadir Nodo</span>
+            <span class="header-title">{{ languageService.dictionary().CONTEXT_MENU.ADD_NODE_TITLE }}</span>
         </div>
 
         <div class="search-box">
             <lucide-icon [img]="icons.search" class="search-icon"></lucide-icon>
-            <input type="text" placeholder="Buscar..." (input)="onSearch($event)" autofocus>
+            <input type="text" [placeholder]="languageService.dictionary().CONTEXT_MENU.SEARCH_PLACEHOLDER"
+                (input)="onSearch($event)" autofocus>
         </div>
 
         <div class="scroll-list">
             <button class="menu-item" (click)="handleNestedAction('add-node:service')"
                 *ngIf="'servicio service'.includes(searchQuery().toLowerCase()) || searchQuery() === ''">
                 <lucide-icon [img]="icons.server" class="icon"></lucide-icon>
-                <span>Servicio</span>
+                <span>{{ languageService.dictionary().CONTEXT_MENU.SERVICE }}</span>
             </button>
 
             <button class="menu-item" (click)="handleNestedAction('add-node:volume')"
                 *ngIf="'volumen volume'.includes(searchQuery().toLowerCase()) || searchQuery() === ''">
                 <lucide-icon [img]="icons.db" class="icon"></lucide-icon>
-                <span>Volumen</span>
+                <span>{{ languageService.dictionary().CONTEXT_MENU.VOLUME }}</span>
             </button>
 
             <button class="menu-item" (click)="handleNestedAction('add-node:network')"
                 *ngIf="'red network'.includes(searchQuery().toLowerCase()) || searchQuery() === ''">
                 <lucide-icon [img]="icons.network" class="icon"></lucide-icon>
-                <span>Red</span>
+                <span>{{ languageService.dictionary().CONTEXT_MENU.NETWORK }}</span>
             </button>
         </div>
     </ng-container>
@@ -52,11 +53,11 @@
     <ng-container *ngIf="view() === 'node-context'">
         <button class="menu-item" (click)="onAction('edit-node')">
             <lucide-icon [img]="icons.edit" class="icon"></lucide-icon>
-            <span>Editar</span>
+            <span>{{ languageService.dictionary().CONTEXT_MENU.EDIT }}</span>
         </button>
         <button class="menu-item delete-item" (click)="onAction('delete-node')">
             <lucide-icon [img]="icons.trash" class="icon"></lucide-icon>
-            <span>Eliminar</span>
+            <span>{{ languageService.dictionary().CONTEXT_MENU.DELETE }}</span>
         </button>
     </ng-container>
 </div>

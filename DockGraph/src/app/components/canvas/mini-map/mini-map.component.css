@@ -1,0 +1,31 @@
+.minimap-container {
+    width: 180px;
+    height: 120px;
+    background-color: rgba(15, 23, 42, 0.2);
+    /* Dark transparency */
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    pointer-events: none;
+    /* Non-interactive for now */
+    transition: opacity 0.2s;
+}
+
+.node-rect {
+    position: absolute;
+    border-radius: 2px;
+    opacity: 0.9;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.viewport-rect {
+    position: absolute;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.05);
+    z-index: 10;
+    border-radius: 2px;
+    box-shadow: none;
+}

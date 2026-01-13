@@ -21,12 +21,18 @@ async function main() {
                 image: 'postgres:15-alpine',
                 environment: {
                     POSTGRES_USER: 'admin',
-                    POSTGRES_PASSWORD: 'password',
+                    POSTGRES_PASSWORD: '${DB_PASSWORD}',
                     POSTGRES_DB: 'app_db',
                 },
                 volumes: ['pg_data:/var/lib/postgresql/data'],
                 ports: ['5432:5432'],
-                restart: 'always'
+                restart: 'unless-stopped',
+                healthcheck: {
+                    test: ['CMD-SHELL', 'pg_isready -U admin'],
+                    interval: '10s',
+                    timeout: '5s',
+                    retries: 5
+                }
             },
         },
         {
@@ -42,7 +48,7 @@ async function main() {
                 },
                 ports: ['3000:3000'],
                 depends_on: ['postgres-db'],
-                restart: 'always'
+                restart: 'unless-stopped'
             },
         },
         {
@@ -52,34 +58,47 @@ async function main() {
             config: {
                 services: {
                     frontend: {
-                        image: 'my-angular-app:latest',
-                        ports: ['80:80'],
+                        build: './frontend',
+                        ports: ['4200:4200'],
+                        stdin_open: true,
+                        tty: true,
                         networks: ['public_net', 'internal_net'],
                         depends_on: ['backend'],
-                        restart: 'always'
+                        restart: 'unless-stopped'
                     },
                     backend: {
-                        image: 'my-node-app:latest',
+                        build: './backend',
+                        ports: ['3000:3000'],
                         networks: ['internal_net'],
                         environment: {
                             DB_HOST: 'db',
                             DB_PORT: '5432',
                             DB_User: 'admin',
-                            DB_PASS: 'securepass'
+                            DB_PASS: '${DB_PASSWORD}'
                         },
-                        depends_on: ['db'],
-                        restart: 'always'
+                        depends_on: {
+                            db: {
+                                condition: 'service_healthy'
+                            }
+                        },
+                        restart: 'unless-stopped'
                     },
                     db: {
                         image: 'postgres:15-alpine',
                         networks: ['internal_net'],
                         environment: {
                             POSTGRES_USER: 'admin',
-                            POSTGRES_PASSWORD: 'securepass',
+                            POSTGRES_PASSWORD: '${DB_PASSWORD}',
                             POSTGRES_DB: 'app_db'
                         },
                         volumes: ['db_data:/var/lib/postgresql/data'],
-                        restart: 'always'
+                        restart: 'unless-stopped',
+                        healthcheck: {
+                            test: ['CMD-SHELL', 'pg_isready -U admin'],
+                            interval: '10s',
+                            timeout: '5s',
+                            retries: 5
+                        }
                     }
                 },
                 networks: {
@@ -102,28 +121,44 @@ async function main() {
             config: {
                 services: {
                     frontend: {
-                        image: 'angular-front:latest',
-                        ports: ['4200:80'],
+                        build: './frontend',
+                        ports: ['4200:4200'],
+                        stdin_open: true,
+                        tty: true,
                         networks: ['app_net'],
-                        depends_on: ['api']
+                        depends_on: ['api'],
+                        restart: 'unless-stopped'
                     },
                     api: {
-                        image: 'python-api:3.9',
+                        build: './api',
+                        ports: ['5000:5000'],
                         networks: ['app_net'],
                         environment: {
-                            DATABASE_URL: 'postgresql://user:pass@db:5432/mydb'
+                            DATABASE_URL: 'postgresql://user:${DB_PASSWORD}@db:5432/mydb'
                         },
-                        depends_on: ['db']
+                        depends_on: {
+                            db: {
+                                condition: 'service_healthy'
+                            }
+                        },
+                        restart: 'unless-stopped'
                     },
                     db: {
                         image: 'postgres:15',
                         networks: ['app_net'],
                         environment: {
                             POSTGRES_USER: 'user',
-                            POSTGRES_PASSWORD: 'pass',
+                            POSTGRES_PASSWORD: '${DB_PASSWORD}',
                             POSTGRES_DB: 'mydb'
                         },
-                        volumes: ['pg_data:/var/lib/postgresql/data']
+                        volumes: ['pg_data:/var/lib/postgresql/data'],
+                        restart: 'unless-stopped',
+                        healthcheck: {
+                            test: ['CMD-SHELL', 'pg_isready -U user'],
+                            interval: '10s',
+                            timeout: '5s',
+                            retries: 5
+                        }
                     }
                 },
                 networks: {
@@ -136,27 +171,232 @@ async function main() {
         },
         {
             name: 'MERN Stack',
-            description: 'Fullstack MongoDB, Express, React, Node.js application.',
+            description: 'Refactored MERN stack with Docker best practices.',
             category: 'Stack',
             config: {
                 services: {
+                    mongo: {
+                        image: 'mongo:6.0',
+                        restart: 'unless-stopped',
+                        volumes: ['mongo_data:/data/db'],
+                        networks: ['mern_net'],
+                        healthcheck: {
+                            test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"],
+                            interval: '10s',
+                            timeout: '5s',
+                            retries: 5
+                        }
+                    },
                     client: {
-                        image: 'react-app:latest',
+                        build: './client',
+                        restart: 'unless-stopped',
                         ports: ['3000:3000'],
+                        stdin_open: true,
+                        tty: true,
                         depends_on: ['server'],
                         networks: ['mern_net']
                     },
                     server: {
-                        image: 'express-api:latest',
+                        build: './server',
+                        restart: 'unless-stopped',
+                        ports: ['5000:5000'],
                         environment: {
                             MONGO_URI: 'mongodb://mongo:27017/mern_db'
                         },
-                        depends_on: ['mongo'],
+                        depends_on: {
+                            mongo: {
+                                condition: 'service_healthy'
+                            }
+                        },
                         networks: ['mern_net']
-                    },
+                    }
+                },
+                volumes: {
+                    mongo_data: {}
+                },
+                networks: {
+                    mern_net: {}
+                }
+            }
+        },
+        {
+            name: 'MERN + Mongo Express',
+            description: 'MERN Stack with Mongo Express for database visualization.',
+            category: 'Stack',
+            config: {
+                services: {
                     mongo: {
                         image: 'mongo:6.0',
+                        restart: 'unless-stopped',
                         volumes: ['mongo_data:/data/db'],
+                        networks: ['mern_net'],
+                        healthcheck: {
+                            test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"],
+                            interval: '10s',
+                            timeout: '5s',
+                            retries: 5
+                        }
+                    },
+                    client: {
+                        build: './client',
+                        restart: 'unless-stopped',
+                        ports: ['3000:3000'],
+                        stdin_open: true,
+                        tty: true,
+                        depends_on: ['server'],
+                        networks: ['mern_net']
+                    },
+                    server: {
+                        build: './server',
+                        restart: 'unless-stopped',
+                        ports: ['5000:5000'],
+                        environment: {
+                            MONGO_URI: 'mongodb://mongo:27017/mern_db'
+                        },
+                        depends_on: {
+                            mongo: {
+                                condition: 'service_healthy'
+                            }
+                        },
+                        networks: ['mern_net']
+                    },
+                    'mongo-express': {
+                        image: 'mongo-express',
+                        restart: 'unless-stopped',
+                        ports: ['8081:8081'],
+                        environment: {
+                            ME_CONFIG_MONGODB_SERVER: 'mongo'
+                        },
+                        depends_on: {
+                            mongo: {
+                                condition: 'service_healthy'
+                            }
+                        },
+                        networks: ['mern_net']
+                    }
+                },
+                volumes: {
+                    mongo_data: {}
+                },
+                networks: {
+                    mern_net: {}
+                }
+            }
+        },
+        {
+            name: 'MERN + Redis',
+            description: 'MERN Stack with Redis for caching.',
+            category: 'Stack',
+            config: {
+                services: {
+                    mongo: {
+                        image: 'mongo:6.0',
+                        restart: 'unless-stopped',
+                        volumes: ['mongo_data:/data/db'],
+                        networks: ['mern_net'],
+                        healthcheck: {
+                            test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"],
+                            interval: '10s',
+                            timeout: '5s',
+                            retries: 5
+                        }
+                    },
+                    client: {
+                        build: './client',
+                        restart: 'unless-stopped',
+                        ports: ['3000:3000'],
+                        stdin_open: true,
+                        tty: true,
+                        depends_on: ['server'],
+                        networks: ['mern_net']
+                    },
+                    server: {
+                        build: './server',
+                        restart: 'unless-stopped',
+                        ports: ['5000:5000'],
+                        environment: {
+                            MONGO_URI: 'mongodb://mongo:27017/mern_db',
+                            REDIS_URL: 'redis://redis:6379'
+                        },
+                        depends_on: {
+                            mongo: {
+                                condition: 'service_healthy'
+                            },
+                            redis: {
+                                condition: 'service_healthy'
+                            }
+                        },
+                        networks: ['mern_net']
+                    },
+                    redis: {
+                        image: 'redis:alpine',
+                        restart: 'unless-stopped',
+                        networks: ['mern_net'],
+                        healthcheck: {
+                            test: ['CMD', 'redis-cli', 'ping'],
+                            interval: '10s',
+                            timeout: '5s',
+                            retries: 5
+                        }
+                    }
+                },
+                volumes: {
+                    mongo_data: {}
+                },
+                networks: {
+                    mern_net: {}
+                }
+            }
+        },
+        {
+            name: 'MERN + Nginx',
+            description: 'MERN Stack with Nginx as a reverse proxy.',
+            category: 'Stack',
+            config: {
+                services: {
+                    mongo: {
+                        image: 'mongo:6.0',
+                        restart: 'unless-stopped',
+                        volumes: ['mongo_data:/data/db'],
+                        networks: ['mern_net'],
+                        healthcheck: {
+                            test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"],
+                            interval: '10s',
+                            timeout: '5s',
+                            retries: 5
+                        }
+                    },
+                    nginx: {
+                        image: 'nginx:latest',
+                        restart: 'unless-stopped',
+                        ports: ['80:80'],
+                        volumes: ['./nginx/nginx.conf:/etc/nginx/conf.d/default.conf'],
+                        depends_on: ['client', 'server'],
+                        networks: ['mern_net']
+                    },
+                    client: {
+                        build: {
+                            context: './client'
+                        },
+                        restart: 'unless-stopped',
+                        stdin_open: true,
+                        tty: true,
+                        depends_on: ['server'],
+                        networks: ['mern_net']
+                    },
+                    server: {
+                        build: {
+                            context: './server'
+                        },
+                        restart: 'unless-stopped',
+                        environment: {
+                            MONGO_URI: 'mongodb://mongo:27017/mern_db'
+                        },
+                        depends_on: {
+                            mongo: {
+                                condition: 'service_healthy'
+                            }
+                        },
                         networks: ['mern_net']
                     }
                 },

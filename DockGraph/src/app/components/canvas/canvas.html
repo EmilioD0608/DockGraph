@@ -1,3 +1,7 @@
+<app-mini-map class="mini-map-overlay" [nodes]="nodes" [transform]="transform()" [canvasWidth]="canvasSize().width"
+    [canvasHeight]="canvasSize().height">
+</app-mini-map>
+
 <div class="canvas-background"
     [style.background-position]="Math.round(transform().x) + 'px ' + Math.round(transform().y) + 'px'">
 </div>
@@ -57,10 +61,12 @@
 
             <!-- Service Column 2: Indicators -->
             <div class="service-col service-indicators">
-                <div class="indicator-box" [class.active]="hasPorts(node)" title="Ports Configured">
+                <div class="indicator-box" [class.active]="hasPorts(node)"
+                    [title]="languageService.dictionary().CANVAS.PORTS_CONFIGURED">
                     <lucide-icon [img]="icons.globe" class="indicator-icon"></lucide-icon>
                 </div>
-                <div class="indicator-box" [class.active]="hasBuild(node)" title="Build Context">
+                <div class="indicator-box" [class.active]="hasBuild(node)"
+                    [title]="languageService.dictionary().CANVAS.BUILD_CONTEXT">
                     <lucide-icon [img]="icons.hammer" class="indicator-icon"></lucide-icon>
                 </div>
             </div>
@@ -94,7 +100,8 @@
 
             <!-- Volume Column 2: Indicators -->
             <div class="service-col service-indicators">
-                <div class="indicator-box full-height" [class.active]="isExternal(node)" title="External Volume">
+                <div class="indicator-box full-height" [class.active]="isExternal(node)"
+                    [title]="languageService.dictionary().CANVAS.EXTERNAL_VOLUME">
                     <lucide-icon [img]="icons.globe" class="indicator-icon"></lucide-icon>
                 </div>
             </div>
@@ -116,7 +123,8 @@
 
             <!-- Network Column 2: Indicators -->
             <div class="service-col service-indicators">
-                <div class="indicator-box full-height" [class.active]="isInternal(node)" title="Internal Network Only">
+                <div class="indicator-box full-height" [class.active]="isInternal(node)"
+                    [title]="languageService.dictionary().CANVAS.INTERNAL_NETWORK">
                     <lucide-icon [img]="icons.lock" class="indicator-icon"></lucide-icon>
                 </div>
             </div>

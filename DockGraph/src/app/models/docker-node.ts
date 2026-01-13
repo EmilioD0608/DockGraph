@@ -39,7 +39,9 @@ export interface DockerNodeData {
         environment?: Record<string, string>; // ej: { POSTGRES_PASSWORD: "admin" }
         volumes?: string[];     // Rutas locales
         command?: string;
-        restart?: 'always' | 'on-failure' | 'no';
+        restart?: 'always' | 'on-failure' | 'no' | 'unless-stopped';
+        stdin_open?: boolean;   // -i
+        tty?: boolean;          // -t
 
         // Network & Volume specific
         driver?: string;        // networks: bridge/host/overlay/none, volumes: local/etc
@@ -57,6 +59,7 @@ export interface DockerNodeData {
             context: string;
             dockerfile?: string;
         };
+        depends_on?: Record<string, { condition: string }>;
         container_name?: string;
         healthcheck?: {
             test: string[];

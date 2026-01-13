@@ -1,6 +1,7 @@
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule, PlusCircle, Search, ArrowLeft, ChevronRight, Box, Trash2, Edit, Server, Database, Network, Scan } from 'lucide-angular';
+import { LanguageService } from '../../services/language.service';
 
 @Component({
     selector: 'app-context-menu',
@@ -10,6 +11,7 @@ import { LucideAngularModule, PlusCircle, Search, ArrowLeft, ChevronRight, Box, 
     styleUrls: ['./context-menu.component.css']
 })
 export class ContextMenuComponent {
+    public languageService = inject(LanguageService);
     @Input() x = 0;
     @Input() y = 0;
     @Input() set currentView(v: 'main' | 'add-node' | 'node-context') {

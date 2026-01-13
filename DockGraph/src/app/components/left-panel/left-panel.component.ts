@@ -7,6 +7,8 @@ import { DockerNodeData, DockConnection } from '../../models/docker-node';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { TemplateService, Template } from '../../services/template.service';
 
+import { LanguageService } from '../../services/language.service';
+
 @Component({
     selector: 'app-left-panel',
     standalone: true,
@@ -16,6 +18,7 @@ import { TemplateService, Template } from '../../services/template.service';
 })
 export class LeftPanelComponent implements OnInit {
     private templateService = inject(TemplateService);
+    public languageService = inject(LanguageService);
 
     @Input() nodes: DockerNodeData[] = [];
     @Input() connections: DockConnection[] = [];

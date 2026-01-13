@@ -1,16 +1,16 @@
 <!-- Always Visible Sidebar -->
 <nav class="sidebar">
     <button class="nav-btn" [class.active]="activeTab() === 'relations'" (click)="selectTab('relations')"
-        title="Relaciones">
+        [title]="languageService.dictionary().TOOLTIPS.RELATIONS">
         <lucide-icon [img]="icons.branch" [size]="20"></lucide-icon>
     </button>
     <button class="nav-btn" [class.active]="activeTab() === 'templates'" (click)="selectTab('templates')"
-        title="Galería de Servicios">
+        [title]="languageService.dictionary().TOOLTIPS.GALLERY">
         <lucide-icon [img]="icons.template" [size]="20"></lucide-icon>
     </button>
     <div style="flex-grow: 1;"></div>
     <button class="nav-btn" [class.active]="activeTab() === 'settings'" (click)="selectTab('settings')"
-        title="Configuración">
+        [title]="languageService.dictionary().TOOLTIPS.SETTINGS">
         <lucide-icon [img]="icons.settings" [size]="20"></lucide-icon>
     </button>
 </nav>
@@ -20,9 +20,9 @@
     <div class="drawer-content">
         <header class="panel-header">
             <h2 [ngSwitch]="activeTab()">
-                <span *ngSwitchCase="'relations'">Administración</span>
-                <span *ngSwitchCase="'templates'">Galería</span>
-                <span *ngSwitchCase="'settings'">Configuración</span>
+                <span *ngSwitchCase="'relations'">{{ languageService.dictionary().TITLES.RELATIONS }}</span>
+                <span *ngSwitchCase="'templates'">{{ languageService.dictionary().TITLES.GALLERY }}</span>
+                <span *ngSwitchCase="'settings'">{{ languageService.dictionary().TITLES.SETTINGS }}</span>
             </h2>
         </header>
 
@@ -53,29 +53,29 @@
 
         <!-- Relations View -->
         <section class="panel-section" *ngIf="activeTab() === 'relations'">
-            <h3>Relaciones</h3>
+            <h3>{{ languageService.dictionary().TITLES.RELATIONS }}</h3>
 
             <div class="create-box">
                 <div class="form-group">
-                    <label>Origen (Servicio)</label>
+                    <label>{{ languageService.dictionary().RELATIONS.SOURCE }}</label>
                     <select [ngModel]="newConnSourceId()" (ngModelChange)="newConnSourceId.set($event)">
-                        <option value="" disabled selected>Seleccionar...</option>
+                        <option value="" disabled selected>{{ languageService.dictionary().RELATIONS.SELECT }}</option>
                         <option *ngFor="let node of sources" [value]="node.id">{{ node.label }}</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label>Destino</label>
+                    <label>{{ languageService.dictionary().RELATIONS.TARGET }}</label>
                     <select [ngModel]="newConnTargetId()" (ngModelChange)="newConnTargetId.set($event)"
                         [disabled]="!newConnSourceId()">
-                        <option value="" disabled selected>Seleccionar...</option>
+                        <option value="" disabled selected>{{ languageService.dictionary().RELATIONS.SELECT }}</option>
                         <option *ngFor="let node of targets" [value]="node.id">{{ node.label }}</option>
                     </select>
                 </div>
 
                 <button class="btn-primary" (click)="create()" [disabled]="!newConnSourceId() || !newConnTargetId()">
                     <lucide-icon [img]="icons.plus" [size]="16"></lucide-icon>
-                    Crear Relación
+                    {{ languageService.dictionary().RELATIONS.CREATE_BTN }}
                 </button>
             </div>
 
@@ -91,27 +91,38 @@
                     </div>
 
                     <div class="conn-actions">
-                        <input #nameInput type="text" placeholder="Nombre de referencia..." [ngModel]="conn.name"
-                            (blur)="updateName(conn, nameInput.value)" class="name-input">
-                        <button class="btn-icon delete" (click)="deleteConn(conn.id)" title="Eliminar">
+                        <input #nameInput type="text"
+                            [placeholder]="languageService.dictionary().RELATIONS.NAME_PLACEHOLDER"
+                            [ngModel]="conn.name" (blur)="updateName(conn, nameInput.value)" class="name-input">
+                        <button class="btn-icon delete" (click)="deleteConn(conn.id)"
+                            [title]="languageService.dictionary().TOOLTIPS.DELETE">
                             <lucide-icon [img]="icons.trash" [size]="16"></lucide-icon>
                         </button>
                     </div>
                 </div>
 
                 <div *ngIf="connections.length === 0" class="empty-state">
-                    No hay relaciones creadas
+                    {{ languageService.dictionary().RELATIONS.EMPTY_STATE }}
                 </div>
             </div>
         </section>
 
         <!-- Settings View (Placeholder) -->
         <section class="panel-section" *ngIf="activeTab() === 'settings'">
+            <div class="form-group">
+                <label>{{ languageService.dictionary().SETTINGS.LANGUAGE }}</label>
+                <select [ngModel]="languageService.currentLang()" (ngModelChange)="languageService.setLanguage($event)">
+                    <option *ngFor="let lang of languageService.availableLanguages" [value]="lang.code">
+                        {{ lang.label }}
+                    </option>
+                </select>
+            </div>
+
             <div class="empty-state">
                 <lucide-icon [img]="icons.settings" [size]="48"
                     style="opacity: 0.2; margin-bottom: 1rem;"></lucide-icon>
-                <p>Próximamente</p>
-                <small>Más opciones de administración estarán disponibles aquí.</small>
+                <p>{{ languageService.dictionary().SETTINGS.SOON }}</p>
+                <small>{{ languageService.dictionary().SETTINGS.SOON_DESC }}</small>
             </div>
         </section>
     </div>
@@ -123,7 +134,9 @@
 </div>
 
 <!-- Confirmation Dialog -->
-<app-confirm-dialog [visible]="dialogVisible" title="Eliminar Relación"
-    message="¿Estás seguro de que quieres eliminar esta relación? Esta acción no se puede deshacer."
-    confirmText="Eliminar" cancelText="Cancelar" (confirm)="onConfirmDelete()" (cancel)="onCancelDelete()">
+<app-confirm-dialog [visible]="dialogVisible" [title]="languageService.dictionary().DIALOGS.DELETE_RELATION_TITLE"
+    [message]="languageService.dictionary().DIALOGS.DELETE_RELATION_MSG"
+    [confirmText]="languageService.dictionary().DIALOGS.CONFIRM"
+    [cancelText]="languageService.dictionary().DIALOGS.CANCEL" (confirm)="onConfirmDelete()"
+    (cancel)="onCancelDelete()">
 </app-confirm-dialog>

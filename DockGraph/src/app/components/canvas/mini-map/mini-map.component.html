@@ -1,0 +1,11 @@
+<div class="minimap-container">
+    <!-- Nodes -->
+    <div class="node-rect" *ngFor="let node of miniMapState().nodes" [style.left.px]="node.x" [style.top.px]="node.y"
+        [style.width.px]="node.w" [style.height.px]="node.h" [style.background-color]="node.color">
+    </div>
+
+    <!-- Viewport Rect -->
+    <div class="viewport-rect" [style.left.px]="miniMapState().viewport.x" [style.top.px]="miniMapState().viewport.y"
+        [style.width.px]="miniMapState().viewport.w" [style.height.px]="miniMapState().viewport.h">
+    </div>
+</div>

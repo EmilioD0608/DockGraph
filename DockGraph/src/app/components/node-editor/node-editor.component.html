@@ -1,6 +1,6 @@
 <div class="editor-panel glass-panel">
     <div class="editor-header">
-        <h3>Editar Nodo</h3>
+        <h3>{{ languageService.dictionary().NODE_EDITOR.TITLE }}</h3>
         <button class="icon-btn" (click)="close.emit()">
             <lucide-icon [img]="icons.close" class="icon"></lucide-icon>
         </button>
@@ -9,8 +9,9 @@
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="editor-content">
 
         <div class="form-group">
-            <label>Nombre {{ node?.type === 'service' ? 'del Servicio' : (node?.type === 'volume' ? 'del Volumen' : 'de
-                la Red') }}</label>
+            <label>{{ node?.type === 'service' ? languageService.dictionary().NODE_EDITOR.NAME_LABEL.SERVICE :
+                (node?.type === 'volume' ? languageService.dictionary().NODE_EDITOR.NAME_LABEL.VOLUME :
+                languageService.dictionary().NODE_EDITOR.NAME_LABEL.NETWORK) }}</label>
             <input type="text" formControlName="label" placeholder="Nombre...">
         </div>
 
@@ -19,19 +20,19 @@
             <div class="form-group-checkbox">
                 <label>
                     <input type="checkbox" formControlName="useBuild">
-                    Usar Build Context (Dockerfile)
+                    {{ languageService.dictionary().NODE_EDITOR.USE_BUILD }}
                 </label>
             </div>
 
             <div *ngIf="form.get('useBuild')?.value" class="form-group">
-                <label>Build Context</label>
+                <label>{{ languageService.dictionary().NODE_EDITOR.BUILD_CONTEXT }}</label>
                 <input type="text" formControlName="buildContext" placeholder="./backend">
-                <label class="sub-label">Dockerfile (Opcional)</label>
+                <label class="sub-label">{{ languageService.dictionary().NODE_EDITOR.DOCKERFILE_OPT }}</label>
                 <input type="text" formControlName="buildDockerfile" placeholder="Dockerfile.dev">
             </div>
 
             <div *ngIf="!form.get('useBuild')?.value" class="form-group">
-                <label>Imagen Docker</label>
+                <label>{{ languageService.dictionary().NODE_EDITOR.IMAGE }}</label>
                 <div class="combobox-container">
                     <input type="text" formControlName="image" placeholder="ej: node:18-alpine"
                         (input)="onImageInput($event)" (focus)="toggleImageDropdown()" (blur)="closeImageDropdown()"
@@ -53,15 +54,27 @@
             </div>
 
             <div class="form-group">
-                <label>Nombre del Contenedor</label>
+                <label>{{ languageService.dictionary().NODE_EDITOR.CONTAINER_NAME }}</label>
                 <input type="text" formControlName="containerName" placeholder="my-custom-container">
+            </div>
+
+            <div class="form-group-checkbox" style="gap: 20px;">
+                <label>
+                    <input type="checkbox" formControlName="stdin_open">
+                    {{ languageService.dictionary().NODE_EDITOR.STDIN_OPEN }}
+                </label>
+                <label>
+                    <input type="checkbox" formControlName="tty">
+                    {{ languageService.dictionary().NODE_EDITOR.TTY }}
+                </label>
             </div>
 
             <!-- Ports Management -->
             <div class="form-section">
                 <div class="section-header">
-                    <label>Puertos</label>
-                    <button type="button" class="btn-small" (click)="addPort()">+ Add</button>
+                    <label>{{ languageService.dictionary().NODE_EDITOR.PORTS }}</label>
+                    <button type="button" class="btn-small" (click)="addPort()">{{
+                        languageService.dictionary().NODE_EDITOR.ADD }}</button>
                 </div>
                 <div class="env-list">
                     <div *ngFor="let port of portEntries; let i = index" class="env-row">
@@ -90,7 +103,7 @@
 
             <!-- Volume MountPoints (Dynamic based on connections) -->
             <div class="form-section" *ngIf="volumeMountsList.length > 0">
-                <label class="section-label">Montaje de Volúmenes</label>
+                <label class="section-label">{{ languageService.dictionary().NODE_EDITOR.VOL_MOUNTS }}</label>
                 <div class="env-list">
                     <div class="env-row" *ngFor="let mount of volumeMountsList; let i = index">
                         <div class="static-label">{{ mount.volumeLabel }}</div>
@@ -104,7 +117,7 @@
             <!-- Resources Accordion -->
             <div class="form-section">
                 <div class="section-header" (click)="toggleResources()" style="cursor: pointer;">
-                    <label>Recursos (Deploy)</label>
+                    <label>{{ languageService.dictionary().NODE_EDITOR.RESOURCES }}</label>
                     <lucide-icon [img]="icons.chevron" [class.rotated]="isResourcesExpanded()"
                         class="icon-xs"></lucide-icon>
                 </div>
@@ -123,7 +136,7 @@
             <!-- Healthcheck -->
             <div class="form-section">
                 <div class="section-header" (click)="toggleHealthcheck()" style="cursor: pointer;">
-                    <label>Healthcheck</label>
+                    <label>{{ languageService.dictionary().NODE_EDITOR.HEALTHCHECK }}</label>
                     <lucide-icon [img]="icons.chevron" [class.rotated]="isHealthcheckExpanded()"
                         class="icon-xs"></lucide-icon>
                 </div>
@@ -157,7 +170,7 @@
             </div>
 
             <div class="form-group">
-                <label>Restart Policy</label>
+                <label>{{ languageService.dictionary().NODE_EDITOR.RESTART }}</label>
                 <select formControlName="restart">
                     <option value="no">no</option>
                     <option value="always">always</option>
@@ -168,8 +181,9 @@
 
             <div class="form-section">
                 <div class="section-header">
-                    <label>Variables de Entorno</label>
-                    <button type="button" class="btn-small" (click)="addEnvVar()">+ Add</button>
+                    <label>{{ languageService.dictionary().NODE_EDITOR.ENV_VARS }}</label>
+                    <button type="button" class="btn-small" (click)="addEnvVar()">{{
+                        languageService.dictionary().NODE_EDITOR.ADD }}</button>
                 </div>
 
                 <div class="env-list">
@@ -187,14 +201,14 @@
             <div class="form-group-checkbox">
                 <label>
                     <input type="checkbox" formControlName="external">
-                    External Network
+                    {{ languageService.dictionary().NODE_EDITOR.EXT_NET }}
                 </label>
-                <small class="hint">Use existing network outside compose</small>
+                <small class="hint">{{ languageService.dictionary().NODE_EDITOR.EXT_NET_HINT }}</small>
             </div>
 
             <ng-container *ngIf="!form.get('external')?.value">
                 <div class="form-group">
-                    <label>Driver</label>
+                    <label>{{ languageService.dictionary().NODE_EDITOR.DRIVER }}</label>
                     <select formControlName="driver">
                         <option value="bridge">bridge</option>
                         <option value="host">host</option>
@@ -206,23 +220,23 @@
                 <div class="form-group-checkbox">
                     <label>
                         <input type="checkbox" formControlName="internal">
-                        Internal Only (No Internet)
+                        {{ languageService.dictionary().NODE_EDITOR.INTERNAL_ONLY }}
                     </label>
                 </div>
 
                 <div class="form-section">
                     <div class="section-header" (click)="toggleIpam()" style="cursor: pointer;">
-                        <label>IPAM Config</label>
+                        <label>{{ languageService.dictionary().NODE_EDITOR.IPAM }}</label>
                         <lucide-icon [img]="icons.chevron" [class.rotated]="isIpamExpanded()"
                             class="icon-xs"></lucide-icon>
                     </div>
                     <div class="ipam-content" *ngIf="isIpamExpanded()">
                         <div class="form-group">
-                            <label>Subnet</label>
+                            <label>{{ languageService.dictionary().NODE_EDITOR.SUBNET }}</label>
                             <input type="text" formControlName="subnet" placeholder="e.g. 172.16.238.0/24">
                         </div>
                         <div class="form-group">
-                            <label>Gateway</label>
+                            <label>{{ languageService.dictionary().NODE_EDITOR.GATEWAY }}</label>
                             <input type="text" formControlName="gateway" placeholder="e.g. 172.16.238.1">
                         </div>
                     </div>
@@ -234,18 +248,18 @@
             <div class="form-group-checkbox">
                 <label>
                     <input type="checkbox" formControlName="external">
-                    External Volume
+                    {{ languageService.dictionary().NODE_EDITOR.EXT_VOL }}
                 </label>
             </div>
 
             <div class="form-group" *ngIf="form.get('external')?.value">
-                <label>Volume Name (on Host)</label>
+                <label>{{ languageService.dictionary().NODE_EDITOR.VOL_NAME_HOST }}</label>
                 <input type="text" formControlName="externalName" placeholder="e.g. existing-data-vol">
             </div>
 
             <ng-container *ngIf="!form.get('external')?.value">
                 <div class="form-group">
-                    <label>Driver</label>
+                    <label>{{ languageService.dictionary().NODE_EDITOR.DRIVER }}</label>
                     <select formControlName="driver">
                         <option value="local">local</option>
                         <option value="vids">vids</option>
@@ -255,8 +269,9 @@
 
                 <div class="form-section">
                     <div class="section-header">
-                        <label>Driver Options</label>
-                        <button type="button" class="btn-small" (click)="addDriverOpt()">+ Add</button>
+                        <label>{{ languageService.dictionary().NODE_EDITOR.DRIVER_OPTS }}</label>
+                        <button type="button" class="btn-small" (click)="addDriverOpt()">{{
+                            languageService.dictionary().NODE_EDITOR.ADD }}</button>
                     </div>
                     <div class="env-list">
                         <div *ngFor="let opt of driverOptsList; let i = index" class="env-row">
@@ -275,7 +290,7 @@
         <div class="editor-footer">
             <button type="submit" class="btn-primary">
                 <lucide-icon [img]="icons.save" class="icon-sm"></lucide-icon>
-                Guardar
+                {{ languageService.dictionary().NODE_EDITOR.SAVE }}
             </button>
         </div>
 

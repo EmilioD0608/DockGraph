@@ -463,3 +463,10 @@
     box-shadow: 0 0 0 2px #fff, 0 8px 24px rgba(0, 0, 0, 0.4);
     z-index: 50;
 }
+
+.mini-map-overlay {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+}
