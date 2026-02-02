@@ -52,7 +52,8 @@
                 <div *ngFor="let socket of node.inputs" class="socket-item input service-socket"
                     (mousedown)="onSocketMouseDown($event, node, socket)"
                     (mouseup)="onSocketMouseUp($event, node, socket)" title="{{ socket.label }}">
-                    <div class="socket-point" [style.background-color]="getSocketColor(socket.type)"></div>
+                    <div class="socket-point" [class.connected]="isSocketConnected(node.id, socket.id)"
+                        [style.background-color]="getSocketColor(socket.type)"></div>
                     <lucide-icon [img]="getSocketIcon(socket.type)" class="socket-icon-small"
                         [style.color]="isSocketConnected(node.id, socket.id) ? getSocketColor(socket.type) : null">
                     </lucide-icon>
@@ -79,7 +80,8 @@
                     <lucide-icon [img]="getSocketIcon(socket.type)" class="socket-icon-small"
                         [style.color]="isSocketConnected(node.id, socket.id) ? getSocketColor(socket.type) : null">
                     </lucide-icon>
-                    <div class="socket-point" [style.background-color]="getSocketColor(socket.type)"></div>
+                    <div class="socket-point" [class.connected]="isSocketConnected(node.id, socket.id)"
+                        [style.background-color]="getSocketColor(socket.type)"></div>
                 </div>
             </div>
         </div>
@@ -91,7 +93,8 @@
                 <div *ngFor="let socket of node.inputs" class="socket-item input service-socket"
                     (mousedown)="onSocketMouseDown($event, node, socket)"
                     (mouseup)="onSocketMouseUp($event, node, socket)" title="{{ socket.label }}">
-                    <div class="socket-point" [style.background-color]="getSocketColor(socket.type)"></div>
+                    <div class="socket-point" [class.connected]="isSocketConnected(node.id, socket.id)"
+                        [style.background-color]="getSocketColor(socket.type)"></div>
                     <lucide-icon [img]="getSocketIcon(socket.type)" class="socket-icon-small"
                         [style.color]="isSocketConnected(node.id, socket.id) ? getSocketColor(socket.type) : null">
                     </lucide-icon>
@@ -114,7 +117,8 @@
                 <div *ngFor="let socket of node.inputs" class="socket-item input service-socket"
                     (mousedown)="onSocketMouseDown($event, node, socket)"
                     (mouseup)="onSocketMouseUp($event, node, socket)" title="{{ socket.label }}">
-                    <div class="socket-point" [style.background-color]="getSocketColor(socket.type)"></div>
+                    <div class="socket-point" [class.connected]="isSocketConnected(node.id, socket.id)"
+                        [style.background-color]="getSocketColor(socket.type)"></div>
                     <lucide-icon [img]="getSocketIcon(socket.type)" class="socket-icon-small"
                         [style.color]="isSocketConnected(node.id, socket.id) ? getSocketColor(socket.type) : null">
                     </lucide-icon>
@@ -136,7 +140,8 @@
                 <div *ngFor="let socket of node.inputs" class="socket-item input"
                     (mousedown)="onSocketMouseDown($event, node, socket)"
                     (mouseup)="onSocketMouseUp($event, node, socket)" title="{{ socket.label }}">
-                    <div class="socket-point" [style.background-color]="getSocketColor(socket.type)"></div>
+                    <div class="socket-point" [class.connected]="isSocketConnected(node.id, socket.id)"
+                        [style.background-color]="getSocketColor(socket.type)"></div>
                     <lucide-icon [img]="getSocketIcon(socket.type)" class="socket-icon-small"
                         [style.color]="isSocketConnected(node.id, socket.id) ? getSocketColor(socket.type) : null">
                     </lucide-icon>
@@ -149,7 +154,8 @@
                     <lucide-icon [img]="getSocketIcon(socket.type)" class="socket-icon-small"
                         [style.color]="isSocketConnected(node.id, socket.id) ? getSocketColor(socket.type) : null">
                     </lucide-icon>
-                    <div class="socket-point" [style.background-color]="getSocketColor(socket.type)"></div>
+                    <div class="socket-point" [class.connected]="isSocketConnected(node.id, socket.id)"
+                        [style.background-color]="getSocketColor(socket.type)"></div>
                 </div>
             </div>
         </div>

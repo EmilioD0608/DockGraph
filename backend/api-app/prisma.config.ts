@@ -16,7 +16,7 @@ export default defineConfig({
 });
 */
 import { defineConfig } from '@prisma/config';
-import "dotenv/config"; // Asegura que las variables de entorno se carguen
+import 'dotenv/config'; // Asegura que las variables de entorno se carguen
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',

@@ -139,7 +139,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    /* border-right moved to title-area border-left for better alignment */
 }
 
 .header-title-area {
@@ -150,6 +150,8 @@
     align-items: center;
     padding: 0 8px;
     overflow: hidden;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    box-sizing: border-box;
 }
 
 .node-icon {
@@ -190,12 +192,32 @@
 }
 
 .socket-point {
+    background: #777;
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    transition: transform 0.1s, width 0.2s, border-radius 0.2s;
+    /* Base sizes defined in specific input/output rules below */
+}
+
+/* Unconnected State: Right Half Circle (Inputs) - Inverted */
+.input .socket-point {
+    width: 5px;
+    height: 10px;
+    border-radius: 0 10px 10px 0;
+}
+
+/* Unconnected State: Left Half Circle (Outputs) - Inverted */
+.output .socket-point {
+    width: 5px;
+    height: 10px;
+    border-radius: 10px 0 0 10px;
+}
+
+/* Connected State: Full Circle */
+.input .socket-point.connected,
+.output .socket-point.connected {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #777;
-    border: 1px solid rgba(0, 0, 0, 0.5);
-    transition: transform 0.1s;
 }
 
 .socket-item:hover .socket-point {
@@ -221,18 +243,28 @@
 
 /* Column 1: Inputs */
 .service-col.service-inputs {
-    align-items: flex-start;
+    align-items: center;
     padding: 0;
+    justify-content: center;
 }
 
 .service-socket {
     height: 40px;
-    margin-left: -15px;
+    margin-left: 0;
     padding-left: 0;
-    gap: 32px;
+    padding-right: 0;
+    /* Shift content slightly left */
+    gap: 0;
     display: flex;
+    justify-content: center;
     align-items: center;
     position: relative;
+    width: 100%;
+}
+
+.service-socket .socket-point {
+    position: absolute;
+    left: -5px;
 }
 
 .service-socket:not(:last-child)::after {
@@ -302,18 +334,26 @@
 /* Column 3: Outputs */
 .service-col.service-outputs {
     padding: 0;
+    align-items: center;
+    justify-content: center;
 }
 
 .service-socket-cell {
     height: 40px;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
     padding-right: 0;
-    margin-right: -14px;
-    gap: 32px;
+    margin-right: 0;
+    gap: 0;
     box-sizing: border-box;
+    width: 100%;
     position: relative;
+}
+
+.service-socket-cell .socket-point {
+    position: absolute;
+    right: -5px;
 }
 
 .service-socket-cell:not(:last-child)::after {
@@ -351,10 +391,7 @@
 }
 
 /* Body Layout */
-.node-volume .service-col,
-.node-network .service-col {
-    width: 50% !important;
-}
+
 
 .node-volume .service-col.service-inputs,
 .node-network .service-col.service-inputs {
@@ -362,14 +399,14 @@
     /* Reset from absolute */
     opacity: 1;
     pointer-events: auto;
-    width: 50% !important;
+    width: 33.333% !important;
     height: auto;
     z-index: 1;
 }
 
 .node-volume .service-col.service-indicators,
 .node-network .service-col.service-indicators {
-    width: 50%;
+    width: 66.666% !important;
 }
 
 .node-volume .service-col.service-outputs,
@@ -379,7 +416,10 @@
 
 /* Socket Height Adjustment for Compact Nodes */
 .node-volume .service-socket,
-.node-network .service-socket,
+.node-network .service-socket {
+    height: 36px;
+}
+
 .node-volume .indicator-box,
 .node-network .indicator-box {
     height: 36px;
@@ -399,6 +439,7 @@
 .node-network .socket-point {
     width: 8px;
     height: 8px;
+    left: -4px;
 }
 
 .node-volume .socket-icon-small,

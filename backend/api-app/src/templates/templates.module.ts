@@ -3,7 +3,7 @@ import { TemplatesService } from './templates.service';
 import { TemplatesController } from './templates.controller';
 
 @Module({
-    controllers: [TemplatesController],
-    providers: [TemplatesService],
+  controllers: [TemplatesController],
+  providers: [TemplatesService],
 })
-export class TemplatesModule { }
+export class TemplatesModule {}

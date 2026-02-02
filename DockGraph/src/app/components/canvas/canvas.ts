@@ -420,9 +420,35 @@ export class CanvasComponent implements AfterViewInit {
     // --- Inputs ---
     let index = node.inputs.findIndex(s => s.id === socketId);
     if (index !== -1) {
-      // Logic para inputs (lado izquierdo)
+      // Logic para inputs
+      let yOffset = 0;
+
+      // Calculate dynamic centering for Service/Volume/Network nodes
+      // which use .service-col.service-inputs with justify-content: center
+      if (node.type === 'service' || node.type === 'volume' || node.type === 'network') {
+        let maxRows = 0;
+        const inputCount = node.inputs.length;
+        const outputCount = node.outputs ? node.outputs.length : 0;
+
+        if (node.type === 'service') {
+          // Service nodes have 2 indicator-boxes in the middle column
+          maxRows = Math.max(inputCount, outputCount, 2);
+        } else {
+          // Volume/Network have 1 indicator box
+          maxRows = Math.max(inputCount, 1);
+        }
+
+        const bodyHeight = maxRows * SLOT_HEIGHT;
+        const groupHeight = inputCount * SLOT_HEIGHT;
+        const topPadding = (bodyHeight - groupHeight) / 2;
+
+        yOffset = topPadding + (index * SLOT_HEIGHT) + (SLOT_HEIGHT / 2);
+      } else {
+        // Standard Top Aligned for generic nodes
+        yOffset = (SLOT_HEIGHT / 2) + (index * SLOT_HEIGHT);
+      }
+
       const xOffset = -10; // Todos tienen el punto un poco salido a la izquierda
-      const yOffset = (SLOT_HEIGHT / 2) + (index * SLOT_HEIGHT);
 
       return {
         x: node.x + xOffset,
