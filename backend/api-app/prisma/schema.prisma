@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -37,5 +36,6 @@ model Template {
   description String?
   category    String
   config      Json
+  isPublic    Boolean  @default(true)
   createdAt   DateTime @default(now())
 }

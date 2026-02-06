@@ -1,0 +1,66 @@
+<div class="login-container">
+    <div class="glass-card">
+        <div class="header">
+            <h1>DockGraph</h1>
+            <p>{{ isRegister() ? 'Crea tu cuenta gratis.' : 'Bienvenido. Tu espacio de trabajo te espera.' }}</p>
+        </div>
+
+        <div class="error-message" *ngIf="errorMessage()">
+            <lucide-icon [img]="icons.alertCircle" [size]="18"></lucide-icon>
+            {{ errorMessage() }}
+        </div>
+
+        <form (submit)="onSubmit(); $event.preventDefault()">
+            <div class="form-group">
+                <label class="label">Correo Electrónico</label>
+                <div class="input-wrapper">
+                    <lucide-icon [img]="icons.mail" class="input-icon" [size]="18"></lucide-icon>
+                    <input type="email" [(ngModel)]="email" name="email" placeholder="usuario@dockgraph.dev" required
+                        spellcheck="false">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="label">Contraseña</label>
+                <div class="input-wrapper">
+                    <lucide-icon [img]="icons.lock" class="input-icon" [size]="18"></lucide-icon>
+                    <input type="password" [(ngModel)]="password" name="password" placeholder="••••••••••••" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-login" [disabled]="isLoading()">
+                <ng-container *ngIf="!isLoading()">
+                    <lucide-icon [img]="icons.login" [size]="20"></lucide-icon>
+                    {{ isRegister() ? 'Crear Cuenta' : 'Iniciar Sesión' }}
+                </ng-container>
+                <div class="loader" *ngIf="isLoading()"></div>
+            </button>
+        </form>
+
+        <div class="toggle-link-container">
+            <p>
+                {{ isRegister() ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?' }}
+                <a href="#" (click)="toggleMode(); $event.preventDefault()">
+                    {{ isRegister() ? 'Inicia Sesión' : 'Regístrate' }}
+                </a>
+            </p>
+        </div>
+
+        <div class="social-login">
+            <div class="social-divider">
+                <div class="line"></div>
+                <span>O accede con</span>
+                <div class="line"></div>
+            </div>
+
+            <div class="social-buttons">
+                <div class="social-btn" title="GitHub">
+                    <lucide-icon [img]="icons.github" [size]="20"></lucide-icon>
+                </div>
+                <div class="social-btn" title="Google"> <!-- Icon was Chrome, likely meant Google auth -->
+                    <lucide-icon [img]="icons.chrome" [size]="20"></lucide-icon>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,43 @@
+<div class="modal-overlay" (click)="close.emit()">
+    <div class="modal-panel glass-panel" (click)="$event.stopPropagation()">
+        <header>
+            <h3>
+                Validación del Proyecto
+                <span class="badg" *ngIf="errorCount > 0">{{errorCount}} Errores</span>
+            </h3>
+            <button class="icon-btn" (click)="close.emit()">×</button>
+        </header>
+
+        <div class="issues-list scroll-custom">
+            <div *ngFor="let issue of issues" class="issue-item" [class.error]="issue.type === 'error'">
+                <div class="icon-col">
+                    <lucide-icon [img]="issue.type === 'error' ? icons.error : icons.warning" size="20"></lucide-icon>
+                </div>
+                <div class="msg-col">
+                    <span class="msg-text">{{ issue.message }}</span>
+                    <small *ngIf="issue.nodeId" class="node-ref">Node: {{issue.nodeId}}</small>
+                </div>
+            </div>
+
+            <div *ngIf="issues.length === 0" class="success-state">
+                <lucide-icon [img]="icons.success" size="48" class="text-success"></lucide-icon>
+                <p>¡Configuración Válida!</p>
+                <small>Listo para exportar.</small>
+            </div>
+        </div>
+
+        <footer>
+            <button class="btn-secondary" (click)="close.emit()">
+                {{ issues.length > 0 ? 'Cancelar' : 'Cerrar' }}
+            </button>
+
+            <button *ngIf="issues.length === 0 || errorCount === 0" class="btn-primary" (click)="export.emit()">
+                {{ issues.length === 0 ? 'Exportar Docker Compose' : 'Exportar con Advertencias' }}
+            </button>
+
+            <button *ngIf="errorCount > 0" class="btn-primary disabled" disabled>
+                Corrige los errores primero
+            </button>
+        </footer>
+    </div>
+</div>

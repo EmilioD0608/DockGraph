@@ -1,0 +1,179 @@
+<div class="page-container" [class.dark-mode]="store.isDarkMode()">
+    <header class="glass-banner">
+        <div class="logo">
+            DockGraph
+            <span class="project-name" *ngIf="store.project().name">/ {{ store.project().name }}</span>
+        </div>
+        <div class="menu-container">
+            <button class="action-btn" (click)="undo()" [style.opacity]="store.canUndo() ? 1 : 0.5"
+                [disabled]="!store.canUndo()" title="Deshacer (Ctrl+Z)">
+                <lucide-icon [img]="icons.undo" [size]="20"></lucide-icon>
+            </button>
+            <button class="action-btn" (click)="redo()" [style.opacity]="store.canRedo() ? 1 : 0.5"
+                [disabled]="!store.canRedo()" title="Rehacer (Ctrl+Y)">
+                <lucide-icon [img]="icons.redo" [size]="20"></lucide-icon>
+            </button>
+            <div style="width: 1px; height: 24px; background: rgba(255,255,255,0.1); margin: 0 8px;"></div>
+            <button class="action-btn" (click)="autoLayout()" title="Auto-organizar Nodos">
+                <lucide-icon [img]="icons.network" [size]="20"></lucide-icon>
+            </button>
+            <button class="action-btn" (click)="saveProject()" title="Guardar Proyecto">
+                <lucide-icon [img]="icons.save" [size]="20"></lucide-icon>
+            </button>
+            <button class="action-btn" (click)="validateAndExport()" title="Validar y Exportar">
+                <lucide-icon [img]="icons.download" [size]="20"></lucide-icon>
+            </button>
+            <button class="action-btn" (click)="openNewProjectWarning()" title="Nuevo Proyecto">
+                <lucide-icon [img]="icons.plus" [size]="20"></lucide-icon>
+            </button>
+
+            <button class="action-btn" (click)="toggleMenu()" aria-label="Toggle menu">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+
+            <div class="dropdown-menu" *ngIf="isMenuOpen()">
+                <div class="menu-item" (click)="openImportModal()">
+                    <lucide-icon [img]="icons.upload" [size]="18"></lucide-icon>
+                    <span>Importar YAML</span>
+                </div>
+                <div class="separator" style="height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0;"></div>
+                <a href="https://github.com/your-repo" target="_blank" class="menu-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 1.19 6.44 1.54a3.37 3.37 0 0 0-.94 2.61v3.87">
+                        </path>
+                    </svg>
+                    Repositorio GitHub
+                </a>
+
+                <div class="menu-item toggle-item" (click)="toggleDarkMode()">
+                    <span>Modo Oscuro</span>
+                    <div class="toggle-switch" [class.on]="store.isDarkMode()">
+                        <div class="toggle-knob"></div>
+                    </div>
+                </div>
+
+                <div class="separator" style="height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0;"></div>
+
+                <div class="menu-item" *ngIf="!authService.currentUser()" (click)="openLoginModal()">
+                    <lucide-icon [img]="icons.upload" [size]="18" style="opacity:0"></lucide-icon> <!-- Hack spacer -->
+                    <span>Iniciar Sesión</span>
+                </div>
+
+                <div class="menu-item" *ngIf="authService.currentUser()" (click)="authService.logout()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-log-out">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" x2="9" y1="12" y2="12" />
+                    </svg>
+                    <span>Cerrar Sesión</span>
+                </div>
+                <div class="user-info" *ngIf="authService.currentUser()"
+                    style="padding: 8px 16px; font-size: 0.8rem; opacity: 0.7;">
+                    {{ authService.currentUser()?.email }}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="content-area">
+        <app-left-panel [nodes]="store.nodes()" [connections]="store.connections()"
+            [selectedConnectionId]="store.selectedConnectionId()" [userProjects]="userProjects()"
+            [isLoggedIn]="!!authService.currentUser()" [activeProjectId]="store.project().id"
+            (connectionCreate)="handlePanelConnectionCreate($event)"
+            (connectionUpdate)="handlePanelConnectionUpdate($event)"
+            (connectionDelete)="handlePanelConnectionDelete($event)"
+            (connectionSelect)="handlePanelConnectionSelect($event)" (projectSelect)="handleProjectSelect($event)"
+            (loginRequest)="openLoginModal()">
+        </app-left-panel>
+
+
+        <div class="canvas-container" (dragover)="onDragOver($event)" (drop)="onDrop($event)">
+            <app-canvas [nodes]="store.nodes()" [connections]="store.connections()"
+                (nodeMove)="onCanvasNodeMove($event)" (nodeDragStart)="onNodeDragStart()"
+                [selectedConnectionId]="store.selectedConnectionId()" (nodeRightClick)="handleNodeContextMenu($event)"
+                (connectionCreated)="handleConnectionCreate($event)">
+            </app-canvas>
+        </div>
+    </main>
+
+    <app-context-menu *ngIf="contextMenu().visible" [x]="contextMenu().x" [y]="contextMenu().y"
+        [currentView]="contextMenu().view" (close)="closeContextMenu()" (action)="handleContextMenuAction($event)">
+    </app-context-menu>
+
+    <!-- Node Editor Panel -->
+    <app-node-editor *ngIf="store.editingNode()" [node]="store.editingNode()"
+        [connectedVolumes]="store.connectedVolumes()" (close)="closeEditor()" (save)="saveNodeEditor($event)">
+    </app-node-editor>
+
+    <!-- Import Modal -->
+    <div class="modal-overlay" *ngIf="isImportModalOpen()" (click)="closeImportModal()">
+        <div class="modal-content glass-panel" (click)="preventDefault($event)" (drop)="onFileDropped($event)"
+            (dragover)="preventDefault($event)">
+            <h3>Importar Docker Compose</h3>
+            <div class="upload-zone" (click)="triggerFileInput(fileInput)">
+                <lucide-icon [img]="icons.upload" class="icon-lg"></lucide-icon>
+                <p>Arrastra tu archivo docker-compose.yaml aquí</p>
+                <span class="or-separator">- o -</span>
+                <button type="button" class="modal-btn" (click)="triggerFileInput(fileInput, $event)">Seleccionar
+                    Archivo</button>
+                <input #fileInput type="file" hidden accept=".yaml,.yml" (change)="onFileSelected($event)"
+                    (click)="$event.stopPropagation()">
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Project Creation Modal -->
+    <div class="modal-overlay" *ngIf="isProjectModalOpen()">
+        <div class="modal-content glass-panel">
+            <h3>Nuevo Proyecto</h3>
+            <div class="form-container">
+                <div class="form-group">
+                    <label>Nombre del Proyecto</label>
+                    <input type="text" [ngModel]="store.project().name" (ngModelChange)="updateProjectName($event)"
+                        placeholder="Mi Proyecto Increíble" class="input-field">
+                </div>
+
+                <div class="form-group">
+                    <label>Tecnología</label>
+                    <div class="tech-options">
+                        <div class="tech-option" [class.selected]="store.project().tech === 'docker-compose'"
+                            (click)="setProjectTech('docker-compose')">
+                            <span class="tech-icon">🐳</span>
+                            <span style="font-weight: 500;">Docker Compose</span>
+                            <div class="check-circle" *ngIf="store.project().tech === 'docker-compose'"></div>
+                        </div>
+                        <div class="tech-option disabled">
+                            <span class="tech-icon">☸️</span>
+                            <span>Kubernetes</span>
+                            <span class="tag">Pronto</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="cta-button full-width" [disabled]="!store.project().name" (click)="createProject()">
+                    Crear Lienzo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Project Warning Dialog -->
+    <app-confirm-dialog [visible]="isNewProjectWarningOpen()" title="Iniciar Nuevo Proyecto"
+        message="Esto eliminará el proyecto actual y borrará todos los datos locales. ¿Estás seguro de continuar?"
+        confirmText="Sí, crear nuevo" cancelText="Cancelar" (confirm)="confirmNewProject()"
+        (cancel)="cancelNewProject()">
+    </app-confirm-dialog>
+    <app-validation-dialog *ngIf="isValidationOpen()" [issues]="validationIssues()"
+        (close)="isValidationOpen.set(false)" (export)="onConfirmExport()">
+    </app-validation-dialog>
+</div>

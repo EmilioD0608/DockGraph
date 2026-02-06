@@ -8,3 +8,6 @@ dist/
 .idea/
 *.log
 .DS_Store
+Analisis/
+.agent/
+docs/

@@ -1,0 +1,171 @@
+<app-mini-map class="mini-map-overlay" [nodes]="nodes" [transform]="transform()" [canvasWidth]="canvasSize().width"
+    [canvasHeight]="canvasSize().height">
+</app-mini-map>
+
+<div class="canvas-background"
+    [style.background-position]="Math.round(transform().x) + 'px ' + Math.round(transform().y) + 'px'">
+</div>
+
+<div class="canvas-content"
+    [style.transform]="'translate(' + Math.round(transform().x) + 'px, ' + Math.round(transform().y) + 'px) scale(' + transform().scale + ')'">
+
+    <!-- SVG Layer for connections -->
+    <svg class="connections-layer" style="overflow: visible">
+        <!-- Existing Connections -->
+        <path *ngFor="let conn of connections" [attr.d]="getPath(
+                getSocketPosition(conn.sourceNodeId, conn.sourceSocketId).x,
+                getSocketPosition(conn.sourceNodeId, conn.sourceSocketId).y,
+                getSocketPosition(conn.targetNodeId, conn.targetSocketId).x,
+                getSocketPosition(conn.targetNodeId, conn.targetSocketId).y
+            )" [attr.stroke]="getConnectionColor(conn)" stroke-width="2" stroke-dasharray="10,5" fill="none"
+            class="connection-line" [class.selected]="conn.id === selectedConnectionId" />
+
+        <!-- Dragging Connection -->
+        <path *ngIf="dragConnection() as drag" [attr.d]="getPath(drag.x1, drag.y1, drag.x2, drag.y2)"
+            [attr.stroke]="drag.color" stroke-width="2" stroke-dasharray="5,5" fill="none" />
+    </svg>
+
+    <div class="selection-box" *ngIf="selectionBox()" [style.left.px]="selectionBox()!.x"
+        [style.top.px]="selectionBox()!.y" [style.width.px]="selectionBox()!.w" [style.height.px]="selectionBox()!.h">
+    </div>
+
+    @for (node of nodes; track node.id) {
+    <div class="node-card" [class.node-volume]="node.type === 'volume'" [class.node-network]="node.type === 'network'"
+        [class.selected]="selectedNodeIds().has(node.id)" [style.left.px]="Math.round(node.x)"
+        [style.top.px]="Math.round(node.y)" (mousedown)="onNodeMouseDown($event, node)"
+        (contextmenu)="onNodeContextMenu($event, node)">
+
+        <div class="node-header" [style.border-top-color]="node.color">
+            <div class="header-icon-area">
+                <lucide-icon *ngIf="node.type === 'service'" [img]="icons.server" class="node-icon"></lucide-icon>
+                <lucide-icon *ngIf="node.type === 'volume'" [img]="icons.db" class="node-icon"></lucide-icon>
+                <lucide-icon *ngIf="node.type === 'network'" [img]="icons.network" class="node-icon"></lucide-icon>
+            </div>
+            <div class="header-title-area">
+                <span class="node-title">{{ node.label }}</span>
+            </div>
+        </div>
+
+        <div class="node-body service-body" *ngIf="node.type === 'service'">
+            <!-- Service Column 1: Inputs (Dep In) -->
+            <div class="service-col service-inputs">
+                <div *ngFor="let socket of node.inputs" class="socket-item input service-socket"
+                    (mousedown)="onSocketMouseDown($event, node, socket)"
+                    (mouseup)="onSocketMouseUp($event, node, socket)" (mouseenter)="onSocketMouseEnter(socket, node)"
+                    (mouseleave)="onSocketMouseLeave()" title="{{ socket.label }}">
+                    <div class="socket-point" [class.connected]="isSocketConnected(node.id, socket.id)"
+                        [style.background-color]="getSocketColor(socket.type)"></div>
+                    <lucide-icon [img]="getSocketIcon(socket.type)" class="socket-icon-small"
+                        [style.color]="isSocketConnected(node.id, socket.id) ? getSocketColor(socket.type) : null">
+                    </lucide-icon>
+                </div>
+            </div>
+
+            <!-- Service Column 2: Indicators -->
+            <div class="service-col service-indicators">
+                <div class="indicator-box" [class.active]="hasPorts(node)"
+                    [title]="languageService.dictionary().CANVAS.PORTS_CONFIGURED">
+                    <lucide-icon [img]="icons.globe" class="indicator-icon"></lucide-icon>
+                </div>
+                <div class="indicator-box" [class.active]="hasBuild(node)"
+                    [title]="languageService.dictionary().CANVAS.BUILD_CONTEXT">
+                    <lucide-icon [img]="icons.hammer" class="indicator-icon"></lucide-icon>
+                </div>
+            </div>
+
+            <!-- Service Column 3: Outputs -->
+            <div class="service-col service-outputs">
+                <div *ngFor="let socket of node.outputs" class="socket-item output service-socket-cell"
+                    (mousedown)="onSocketMouseDown($event, node, socket)"
+                    (mouseup)="onSocketMouseUp($event, node, socket)" (mouseenter)="onSocketMouseEnter(socket, node)"
+                    (mouseleave)="onSocketMouseLeave()" title="{{ socket.label }}">
+                    <lucide-icon [img]="getSocketIcon(socket.type)" class="socket-icon-small"
+                        [style.color]="isSocketConnected(node.id, socket.id) ? getSocketColor(socket.type) : null">
+                    </lucide-icon>
+                    <div class="socket-point" [class.connected]="isSocketConnected(node.id, socket.id)"
+                        [style.background-color]="getSocketColor(socket.type)"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Volume Specific Body -->
+        <div class="node-body service-body" *ngIf="node.type === 'volume'">
+            <!-- Volume Column 1: Inputs (Connector) -->
+            <div class="service-col service-inputs">
+                <div *ngFor="let socket of node.inputs" class="socket-item input service-socket"
+                    (mousedown)="onSocketMouseDown($event, node, socket)"
+                    (mouseup)="onSocketMouseUp($event, node, socket)" (mouseenter)="onSocketMouseEnter(socket, node)"
+                    (mouseleave)="onSocketMouseLeave()" title="{{ socket.label }}">
+                    <div class="socket-point" [class.connected]="isSocketConnected(node.id, socket.id)"
+                        [style.background-color]="getSocketColor(socket.type)"></div>
+                    <lucide-icon [img]="getSocketIcon(socket.type)" class="socket-icon-small"
+                        [style.color]="isSocketConnected(node.id, socket.id) ? getSocketColor(socket.type) : null">
+                    </lucide-icon>
+                </div>
+            </div>
+
+            <!-- Volume Column 2: Indicators -->
+            <div class="service-col service-indicators">
+                <div class="indicator-box full-height" [class.active]="isExternal(node)"
+                    [title]="languageService.dictionary().CANVAS.EXTERNAL_VOLUME">
+                    <lucide-icon [img]="icons.globe" class="indicator-icon"></lucide-icon>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Specific Body -->
+        <div class="node-body service-body" *ngIf="node.type === 'network'">
+            <!-- Network Column 1: Inputs (Connector) -->
+            <div class="service-col service-inputs">
+                <div *ngFor="let socket of node.inputs" class="socket-item input service-socket"
+                    (mousedown)="onSocketMouseDown($event, node, socket)"
+                    (mouseup)="onSocketMouseUp($event, node, socket)" (mouseenter)="onSocketMouseEnter(socket, node)"
+                    (mouseleave)="onSocketMouseLeave()" title="{{ socket.label }}">
+                    <div class="socket-point" [class.connected]="isSocketConnected(node.id, socket.id)"
+                        [style.background-color]="getSocketColor(socket.type)"></div>
+                    <lucide-icon [img]="getSocketIcon(socket.type)" class="socket-icon-small"
+                        [style.color]="isSocketConnected(node.id, socket.id) ? getSocketColor(socket.type) : null">
+                    </lucide-icon>
+                </div>
+            </div>
+
+            <!-- Network Column 2: Indicators -->
+            <div class="service-col service-indicators">
+                <div class="indicator-box full-height" [class.active]="isInternal(node)"
+                    [title]="languageService.dictionary().CANVAS.INTERNAL_NETWORK">
+                    <lucide-icon [img]="icons.lock" class="indicator-icon"></lucide-icon>
+                </div>
+            </div>
+        </div>
+
+        <!-- Default Fallback (should not be hit for service/volume/network if logic is sound) -->
+        <div class="node-body" *ngIf="node.type !== 'service' && node.type !== 'volume' && node.type !== 'network'">
+            <div class="sockets-column inputs">
+                <div *ngFor="let socket of node.inputs" class="socket-item input"
+                    (mousedown)="onSocketMouseDown($event, node, socket)"
+                    (mouseup)="onSocketMouseUp($event, node, socket)" (mouseenter)="onSocketMouseEnter(socket, node)"
+                    (mouseleave)="onSocketMouseLeave()" title="{{ socket.label }}">
+                    <div class="socket-point" [class.connected]="isSocketConnected(node.id, socket.id)"
+                        [style.background-color]="getSocketColor(socket.type)"></div>
+                    <lucide-icon [img]="getSocketIcon(socket.type)" class="socket-icon-small"
+                        [style.color]="isSocketConnected(node.id, socket.id) ? getSocketColor(socket.type) : null">
+                    </lucide-icon>
+                </div>
+            </div>
+            <div class="sockets-column outputs">
+                <div *ngFor="let socket of node.outputs" class="socket-item output"
+                    (mousedown)="onSocketMouseDown($event, node, socket)"
+                    (mouseup)="onSocketMouseUp($event, node, socket)" (mouseenter)="onSocketMouseEnter(socket, node)"
+                    (mouseleave)="onSocketMouseLeave()" title="{{ socket.label }}">
+                    <lucide-icon [img]="getSocketIcon(socket.type)" class="socket-icon-small"
+                        [style.color]="isSocketConnected(node.id, socket.id) ? getSocketColor(socket.type) : null">
+                    </lucide-icon>
+                    <div class="socket-point" [class.connected]="isSocketConnected(node.id, socket.id)"
+                        [style.background-color]="getSocketColor(socket.type)"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+
+</div>

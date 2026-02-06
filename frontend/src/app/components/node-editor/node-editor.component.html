@@ -1,0 +1,373 @@
+<div class="editor-panel glass-panel">
+    <div class="editor-header">
+        <div class="header-left">
+            <h3 class="panel-title">{{ node?.type | titlecase }} Config</h3>
+            <span class="node-id">#{{ node?.label }}</span>
+        </div>
+        <button class="icon-btn" (click)="close.emit()" title="Cerrar">
+            <lucide-icon [img]="icons.close" class="icon"></lucide-icon>
+        </button>
+    </div>
+
+    <!-- TABS HEADER -->
+    <div class="tabs-header">
+        <button *ngFor="let tab of tabs()" class="tab-btn" [class.active]="activeTab() === tab.id"
+            (click)="activeTab.set(tab.id)" [title]="tab.label">
+            <lucide-icon [img]="tab.icon" [size]="16"></lucide-icon>
+            <span class="tab-label">{{ tab.label }}</span>
+        </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="editor-content scroll-custom">
+
+        <!-- ============================================================================================== -->
+        <!-- TAB: GENERAL -->
+        <!-- ============================================================================================== -->
+        <div class="tab-pane" *ngIf="activeTab() === 'general'">
+
+            <div class="form-group">
+                <label>Nombre del Nodo</label>
+                <input type="text" formControlName="label" placeholder="Nombre en el gráfico...">
+            </div>
+
+            <!-- SERVICE SPECIFIC -->
+            <ng-container *ngIf="node?.type === 'service'">
+                <div class="form-group">
+                    <label>Nombre del Contenedor</label>
+                    <input type="text" formControlName="containerName" placeholder="my-custom-container">
+                    <small class="hint">Opcional. Docker generará uno si se omite.</small>
+                </div>
+
+                <!-- Image Source Selector -->
+                <div class="segment-control">
+                    <label>Origen de Imagen</label>
+                    <div class="segment-group">
+                        <label class="segment-option" [class.selected]="!form.get('useBuild')?.value">
+                            <input type="radio" [value]="false" formControlName="useBuild" [hidden]="true">
+                            Docker Hub
+                        </label>
+                        <label class="segment-option" [class.selected]="form.get('useBuild')?.value">
+                            <input type="radio" [value]="true" formControlName="useBuild" [hidden]="true">
+                            Build Local
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Docker Hub Image Input -->
+                <div *ngIf="!form.get('useBuild')?.value" class="form-group slide-in">
+                    <label>Imagen</label>
+                    <div class="combobox-container">
+                        <input type="text" formControlName="image" placeholder="ej: nginx:alpine"
+                            (input)="onImageInput($event)" (focus)="toggleImageDropdown()" (blur)="closeImageDropdown()"
+                            autocomplete="off">
+
+                        <button type="button" class="combo-toggle" (click)="toggleImageDropdown()">
+                            <lucide-icon [img]="icons.chevron" class="icon-xs"></lucide-icon>
+                        </button>
+
+                        <div class="combo-dropdown glass-panel" *ngIf="showImageDropdown()">
+                            <div class="combo-item" *ngFor="let img of filteredImages()" (click)="selectImage(img)">
+                                {{ img }}
+                            </div>
+                            <div class="combo-item empty" *ngIf="filteredImages().length === 0">
+                                Sin sugerencias
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Build Context Input -->
+                <div *ngIf="form.get('useBuild')?.value" class="build-config slide-in">
+                    <div class="form-group">
+                        <label>Contexto de Build</label>
+                        <input type="text" formControlName="buildContext" placeholder="./backend">
+                    </div>
+                    <div class="form-group">
+                        <label>Dockerfile</label>
+                        <input type="text" formControlName="buildDockerfile" placeholder="Dockerfile">
+                    </div>
+                </div>
+
+                <div class="form-group-checkbox-row">
+                    <label class="checkbox-pill">
+                        <input type="checkbox" formControlName="stdin_open">
+                        <span>Interactive (-i)</span>
+                    </label>
+                    <label class="checkbox-pill">
+                        <input type="checkbox" formControlName="tty">
+                        <span>TTY (-t)</span>
+                    </label>
+                </div>
+            </ng-container>
+
+            <!-- NETWORK/VOLUME SPECIFIC GENERAL CONFIG -->
+            <ng-container *ngIf="node?.type !== 'service'">
+                <div class="form-group">
+                    <label>Driver</label>
+                    <select formControlName="driver">
+                        <ng-container *ngIf="node?.type === 'network'">
+                            <option value="bridge">Bridge</option>
+                            <option value="overlay">Overlay</option>
+                            <option value="host">Host</option>
+                            <option value="none">None</option>
+                        </ng-container>
+                        <ng-container *ngIf="node?.type === 'volume'">
+                            <option value="local">Local</option>
+                        </ng-container>
+                    </select>
+                </div>
+
+                <div class="form-group-checkbox">
+                    <label>
+                        <input type="checkbox" formControlName="external">
+                        Recurso Externo
+                    </label>
+                </div>
+
+                <div class="form-group" *ngIf="form.get('external')?.value">
+                    <label>Nombre Externo Real</label>
+                    <input type="text" formControlName="externalName" placeholder="Nombre en Docker...">
+                </div>
+            </ng-container>
+        </div>
+
+
+        <!-- ============================================================================================== -->
+        <!-- TAB: NETWORK -->
+        <!-- ============================================================================================== -->
+        <div class="tab-pane" *ngIf="activeTab() === 'network'">
+
+            <ng-container *ngIf="node?.type === 'service'">
+                <div class="form-section">
+                    <div class="section-header">
+                        <label>Puertos Expuestos</label>
+                        <button type="button" class="btn-xs btn-outline" (click)="addPort()">
+                            <lucide-icon [img]="icons.plus" size="14"></lucide-icon> Agregar
+                        </button>
+                    </div>
+
+                    <div class="list-container">
+                        <div *ngFor="let port of portEntries; let i = index" class="list-row slide-in-row">
+                            <select [value]="port.mode" (change)="updatePortMode(i, $event)" class="compact-select">
+                                <option value="public">Host:Contenedor</option>
+                                <option value="internal">Solo Interno</option>
+                            </select>
+
+                            <ng-container *ngIf="port.mode === 'public'">
+                                <input type="text" [value]="port.hostPort" (input)="updateHostPort(i, $event)"
+                                    placeholder="Auto" class="compact-input port-input">
+                                <span class="separator">:</span>
+                            </ng-container>
+
+                            <input type="text" [value]="port.containerPort" (input)="updateContainerPort(i, $event)"
+                                placeholder="80" class="compact-input port-input">
+
+                            <button type="button" class="icon-btn-danger" (click)="removePort(i)">
+                                <lucide-icon [img]="icons.close" size="14"></lucide-icon>
+                            </button>
+                        </div>
+                        <div *ngIf="portEntries.length === 0" class="empty-state">
+                            Sin mapeo de puertos
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <lucide-icon [img]="icons.network" size="16"></lucide-icon>
+                    <p>Las redes se gestionan conectando nodos en el gráfico.</p>
+                </div>
+            </ng-container>
+
+            <ng-container *ngIf="node?.type === 'network'">
+                <div class="form-group-checkbox">
+                    <label>
+                        <input type="checkbox" formControlName="internal">
+                        Red Interna (Sin salida a Internet)
+                    </label>
+                </div>
+
+                <div class="form-section">
+                    <label class="section-title">IPAM Config</label>
+                    <div class="form-group">
+                        <label>Subnet</label>
+                        <input type="text" formControlName="subnet" placeholder="e.g. 172.16.238.0/24">
+                    </div>
+                    <div class="form-group">
+                        <label>Gateway</label>
+                        <input type="text" formControlName="gateway" placeholder="e.g. 172.16.238.1">
+                    </div>
+                </div>
+            </ng-container>
+        </div>
+
+
+        <!-- ============================================================================================== -->
+        <!-- TAB: STORAGE -->
+        <!-- ============================================================================================== -->
+        <div class="tab-pane" *ngIf="activeTab() === 'storage'">
+            <ng-container *ngIf="node?.type === 'service'">
+                <div class="form-section">
+                    <div class="section-header">
+                        <label>Volúmenes Conectados</label>
+                    </div>
+
+                    <div class="list-container">
+                        <div class="list-row" *ngFor="let mount of volumeMountsList; let i = index">
+                            <div class="volume-badge">
+                                <lucide-icon [img]="icons.hardDrive" size="14"></lucide-icon>
+                                {{ mount.volumeLabel }}
+                            </div>
+                            <span class="arrow">→</span>
+                            <input type="text" [value]="mount.target" (input)="updateMountTarget(i, $event)"
+                                placeholder="/ruta/en/contenedor" class="compact-input flex-grow">
+                        </div>
+                        <div *ngIf="volumeMountsList.length === 0" class="empty-state">
+                            Conecta nodos de Volumen en el gráfico para verlos aquí.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <p>Usa Bind Mounts (Host Path) definiendo volúmenes en la lista de Entorno si necesitas rutas
+                        locales directas.</p>
+                </div>
+            </ng-container>
+
+            <ng-container *ngIf="node?.type === 'volume'">
+                <div class="form-section">
+                    <div class="section-header">
+                        <label>Opciones del Driver</label>
+                        <button type="button" class="btn-xs btn-outline" (click)="addDriverOpt()">
+                            <lucide-icon [img]="icons.plus" size="14"></lucide-icon> Agregar
+                        </button>
+                    </div>
+                    <div class="list-container">
+                        <div *ngFor="let opt of driverOptsList; let i = index" class="list-row slide-in-row">
+                            <input type="text" [value]="opt.key" (input)="updateDriverOptKey(i, $event)"
+                                placeholder="Key" class="compact-input">
+                            <span class="separator">=</span>
+                            <input type="text" [value]="opt.value" (input)="updateDriverOptValue(i, $event)"
+                                placeholder="Value" class="compact-input">
+                            <button type="button" class="icon-btn-danger" (click)="removeDriverOpt(i)">
+                                <lucide-icon [img]="icons.close" size="14"></lucide-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </ng-container>
+        </div>
+
+
+        <!-- ============================================================================================== -->
+        <!-- TAB: ENV (Environment & Resources) -->
+        <!-- ============================================================================================== -->
+        <div class="tab-pane" *ngIf="activeTab() === 'env'">
+
+            <div class="accordion-group">
+                <!-- Environment Variables -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <label>Variables de Entorno</label>
+                        <button type="button" class="btn-xs btn-outline" (click)="addEnvVar()">
+                            <lucide-icon [img]="icons.plus" size="14"></lucide-icon> Agregar
+                        </button>
+                    </div>
+                    <div class="list-container">
+                        <div *ngFor="let env of envVars; let i = index" class="list-row slide-in-row">
+                            <input type="text" [value]="env.key" (input)="updateEnvKey(i, $event)" placeholder="KEY"
+                                class="compact-input key-input">
+                            <span class="separator">=</span>
+                            <input type="text" [value]="env.value" (input)="updateEnvValue(i, $event)"
+                                placeholder="VALUE" class="compact-input value-input">
+                            <button type="button" class="icon-btn-danger" (click)="removeEnvVar(i)">
+                                <lucide-icon [img]="icons.close" size="14"></lucide-icon>
+                            </button>
+                        </div>
+                        <div *ngIf="envVars.length === 0" class="empty-state">
+                            Sin variables
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Restart Policy -->
+                <div class="form-group">
+                    <label>Política de Reinicio</label>
+                    <select formControlName="restart">
+                        <option value="no">No (Default)</option>
+                        <option value="always">Always</option>
+                        <option value="on-failure">On Failure</option>
+                        <option value="unless-stopped">Unless Stopped</option>
+                    </select>
+                </div>
+
+                <!-- Resources -->
+                <div class="form-section bordered">
+                    <div class="section-header" (click)="toggleResources()" style="cursor: pointer;">
+                        <label><lucide-icon [img]="icons.cpu" size="14"></lucide-icon> Límites de Recursos</label>
+                        <lucide-icon [img]="icons.chevron" [class.rotated]="isResourcesExpanded()"
+                            class="icon-xs"></lucide-icon>
+                    </div>
+
+                    <div class="accordion-content" *ngIf="isResourcesExpanded()">
+                        <div class="form-row two-col">
+                            <div class="form-group">
+                                <label>CPU Limit</label>
+                                <input type="text" formControlName="cpuLimit" placeholder="0.5">
+                            </div>
+                            <div class="form-group">
+                                <label>RAM Limit</label>
+                                <input type="text" formControlName="memLimit" placeholder="512M">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Healthcheck -->
+                <div class="form-section bordered">
+                    <div class="section-header" (click)="toggleHealthcheck()" style="cursor: pointer;">
+                        <label><lucide-icon [img]="icons.list" size="14"></lucide-icon> Healthcheck</label>
+                        <lucide-icon [img]="icons.chevron" [class.rotated]="isHealthcheckExpanded()"
+                            class="icon-xs"></lucide-icon>
+                    </div>
+
+                    <div class="accordion-content" *ngIf="isHealthcheckExpanded()">
+                        <div class="form-group">
+                            <label>Test Command</label>
+                            <input type="text" formControlName="hcTest"
+                                placeholder="curl -f http://localhost/ || exit 1">
+                        </div>
+                        <div class="form-row two-col">
+                            <div class="form-group">
+                                <label>Interval</label>
+                                <input type="text" formControlName="hcInterval" placeholder="30s">
+                            </div>
+                            <div class="form-group">
+                                <label>Timeout</label>
+                                <input type="text" formControlName="hcTimeout" placeholder="10s">
+                            </div>
+                        </div>
+                        <div class="form-row two-col">
+                            <div class="form-group">
+                                <label>Retries</label>
+                                <input type="number" formControlName="hcRetries" placeholder="3">
+                            </div>
+                            <div class="form-group">
+                                <label>Start Period</label>
+                                <input type="text" formControlName="hcStartPeriod" placeholder="0s">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </form>
+
+    <div class="editor-footer">
+        <button type="button" class="btn-primary full-width" (click)="onSubmit()">
+            <lucide-icon [img]="icons.save" size="18"></lucide-icon>
+            Guardar Cambios
+        </button>
+    </div>
+</div>

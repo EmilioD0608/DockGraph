@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
+import 'dotenv/config';
+import * as bcrypt from 'bcrypt';
 
 // --- INICIO DE LA CORRECCIÓN DE CONEXIÓN ---
 const connectionString = process.env.DATABASE_URL;
@@ -413,6 +415,21 @@ async function main() {
     },
   ];
 
+
+  // Create Default User
+  const hashedPassword = await bcrypt.hash('password123', 10);
+  const defaultUser = await prisma.user.upsert({
+    where: { email: 'user@example.com' },
+    update: {
+      password: hashedPassword // Ensure existing user gets hashed password update if re-running seed
+    },
+    create: {
+      email: 'user@example.com',
+      password: hashedPassword,
+    },
+  });
+  console.log(`Default user ensured: ${defaultUser.email}`);
+
   for (const data of templates) {
     // Buscamos por nombre para evitar duplicados
     const existing = await prisma.template.findFirst({
@@ -425,13 +442,14 @@ async function main() {
         data: {
           description: data.description,
           category: data.category,
-          config: data.config ?? {}, // Aseguramos que config no sea undefined si es opcional
+          config: data.config ?? {},
+          isPublic: true
         },
       });
       console.log(`Updated template: ${updated.name}`);
     } else {
       const created = await prisma.template.create({
-        data,
+        data: { ...data, isPublic: true },
       });
       console.log(`Created template: ${created.name}`);
     }
