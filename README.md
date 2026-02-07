@@ -1,148 +1,91 @@
-# Guía de Despliegue del Proyecto
+<div align="center">
+  <h1>DockGraph</h1>
+  <p>
+    <strong>The Visual Command Center for Docker Architectures</strong>
+  </p>
+  
+  <p>
+    <a href="#overview">Overview</a> •
+    <a href="#core-capabilities">Core Capabilities</a> •
+    <a href="#getting-started">Getting Started</a>
+  </p>
 
-Este proyecto consiste en una aplicación completa formada por un Backend (NestJS) y un Frontend (Angular).
+  <!-- Add status badges here if available in the future -->
+  <br/>
+</div>
 
-## Estructura del Proyecto
+**DockGraph** bridges the gap between static infrastructure code and dynamic system behavior. It is an advanced engineering tool designed to visualize, manage, and orchestrate Docker Compose environments with precision. 
 
-- **Backend**: Ubicado en `backend/api-app`. Construido con NestJS, Prisma y PostgreSQL.
-- **Frontend**: Ubicado en `DockGraph`. Construido con Angular 21.
+By abstracting the complexity of multi-repository setups, DockGraph allows developers and architects to treat their entire distributed system as a single, cohesive logical unit—regardless of whether the code lives in a monorepo or across scattered polyrepos.
 
----
+## ⚡ Core Capabilities
 
-## Prerrequisitos
+### 🌐 Repository-Agnostic Orchestration
+Stop juggling terminal windows for different projects. DockGraph unifies your workflow by seamlessly integrating **Monorepo** and **Polyrepo** strategies. partial configuration management means you can visualize specific service subsets or the entire enterprise topology in one view.
 
-Antes de comenzar, asegúrate de tener instalado lo siguiente:
+### 🔍 Live Architectural Intelligence
+Move beyond static diagrams. Our engine parses your `docker-compose.yml` files to generate a **real-time, interactive dependency graph**. Instantly identify circular dependencies, orphaned volumes, and network bottlenecks. The visualization evolves as your code changes.
 
-- **Node.js** (versión LTS recomendada, v18 o superior)
-- **PostgreSQL** (Base de datos)
-- **npm** (Gestor de paquetes)
+### 🛡️ Smart Validation & Security
+Deploy with confidence. The integrated environment manager handles sensitive variables and credentials securely, while our parsing engine validates configuration syntax before you even attempt a build. Avoid runtime errors with compile-time insights.
 
----
-
-## 1. Configuración del Backend
-
-El backend gestiona la API y la conexión con la base de datos.
-
-### Pasos:
-
-1.  **Navegar al directorio del backend:**
-    ```bash
-    cd backend/api-app
-    ```
-
-2.  **Instalar dependencias:**
-    ```bash
-    npm install
-    ```
-
-3.  **Configurar variables de entorno:**
-    Crea un archivo `.env` en la raíz de `backend/api-app` basándote en la siguiente configuración (ajusta las credenciales según tu entorno):
-
-    ```env
-    # backend/api-app/.env
-    DATABASE_URL="postgresql://usuario:password@localhost:5432/nombre_base_datos?schema=public"
-    ```
-
-    *Nota: Asegúrate de que la base de datos PostgreSQL esté corriendo y sea accesible.*
-
-4.  **Ejecutar migraciones y seed (semilla) de datos:**
-    Esto creará las tablas necesarias e insertará datos iniciales.
-    ```bash
-    npx prisma migrate dev --name init
-    
-    # Para poblar la base de datos (Seed):
-    # Opción A (si está configurado en package.json):
-    npx prisma db seed
-    
-    # Opción B (manual):
-    npx ts-node prisma/seed.ts
-    ```
-
-5.  **Iniciar el servidor en desarrollo:**
-    ```bash
-    npm run start:dev
-    ```
-    El servidor debería estar corriendo en `http://localhost:3000`.
+### 🛠️ Interactive Service Control
+A robust "Mission Control" for your containers. Start, stop, rebuild, and inspect logs for individual services directly from the graph. No more memorizing CLI flags—just clear, visual operations.
 
 ---
 
-## 2. Configuración del Frontend
+## 🛠️ Technology Stack
 
-El frontend es la interfaz de usuario de la aplicación.
+Built with a commitment to performance and modern standards:
 
-### Pasos:
-
-1.  **Navegar al directorio del frontend:**
-    ```bash
-    cd DockGraph
-    ```
-
-2.  **Instalar dependencias:**
-    ```bash
-    npm install
-    ```
-
-    *Nota: Si encuentras problemas de versiones, verifica que estás usando una versión de Node compatible con Angular 21.*
-
-3.  **Configurar la API URL (si es necesario):**
-    Por defecto, el servicio apunta a `http://localhost:3000`. Si tu backend está en otro puerto o host, edita el archivo:
-    `src/app/services/template.service.ts` (u otros servicios que realicen peticiones HTTP).
-
-4.  **Iniciar el servidor de desarrollo:**
-    ```bash
-    npm start
-    # O comando alternativo
-    ng serve
-    ```
-    La aplicación estará disponible en `http://localhost:4200`.
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | Angular 21 (Signals Architecture) |
+| **Backend** | NestJS (Type-Safe Node.js) |
+| **Data** | PostgreSQL + Prisma ORM |
+| **Engine** | Docker & SSH Integration |
 
 ---
 
-## 3. Despliegue en Producción
+## 🚀 Getting Started
 
-Para entornos de producción, se recomienda compilar los proyectos y servirlos de manera optimizada.
+Deploy the platform locally to start visualizing your infrastructure.
 
-### Backend (Producción)
+### 1. Backend Service
+Initialize the core requirements and database.
 
-1.  **Compilar el proyecto:**
-    ```bash
-    cd backend/api-app
-    npm run build
-    ```
+```bash
+cd backend/api-app
+npm install
 
-2.  **Iniciar el servidor compilado:**
-    ```bash
-    npm run start:prod
-    ```
-    *Se recomienda usar un gestor de procesos como PM2 para mantener la aplicación viva.*
+# Configure environment & database
+cp .env.example .env
+npx prisma migrate dev
+npx prisma db seed
 
-### Frontend (Producción)
+# Launch core
+npm run start:dev
+```
 
-1.  **Compilar el proyecto:**
-    ```bash
-    cd DockGraph
-    npm run build
-    ```
-    Esto generará los archivos estáticos en la carpeta `dist/DockGraph`.
+### 2. Visual Interface
+Launch the client application.
 
-2.  **Servir los archivos estáticos:**
-    Puedes usar servidores web como Nginx, Apache, o servirlo desde el mismo backend de NestJS (configurando `ServeStaticModule`).
+```bash
+cd DockGraph
+npm install
+ng serve
+```
 
-    **Ejemplo con http-server (para pruebas locales de la build):**
-    ```bash
-    npx http-server dist/DockGraph
-    ```
+Access the dashboard at `http://localhost:4200`.
 
 ---
 
-## Comandos Útiles
+## 🤝 Contributing
 
-- **Verificar Prisma Studio:** Visualiza tus datos de forma sencilla.
-  ```bash
-  cd backend/api-app
-  npx prisma studio
-  ```
-- **Linting:** Revisa la calidad del código.
-  ```bash
-  npm run lint
-  ```
+We are building the future of container orchestration tools. Whether you are fixing a bug, designing a new node layout algorithm, or improving documentation, your contributions are welcome.
+
+Please review our [Contributing Guidelines](CONTRIBUTING.md) before submitting a Pull Request.
+
+## 📄 License
+
+Copyright &copy; 2026. Released under the **Apache-2.0 License**.
