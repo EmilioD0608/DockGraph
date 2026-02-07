@@ -30,6 +30,13 @@ export interface DockerNodeData {
     inputs: Socket[];
     outputs: Socket[];
 
+    // 4. Configuración Git (Solo para Proyectos Polyrepo)
+    gitConfig?: {
+        repositoryUrl: string;
+        branch: string;
+        gitCredentialId?: number;
+    };
+
     // 3. Configuración Docker (El Payload real)
     config: {
         image?: string;         // ej: "postgres:14-alpine"

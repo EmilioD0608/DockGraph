@@ -538,3 +538,134 @@ button[disabled] {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* Deploy Modal */
+.deploy-modal {
+    max-width: 520px;
+    text-align: left;
+}
+
+.deploy-info {
+    color: var(--color-text-muted);
+    margin-bottom: 1rem;
+}
+
+.targets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.target-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.target-item:hover {
+    background: rgba(1, 135, 144, 0.15);
+    border-color: var(--color-primary);
+    transform: translateX(4px);
+}
+
+.target-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.target-info strong {
+    color: var(--color-text-main);
+}
+
+.target-info .host {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    font-family: monospace;
+}
+
+.target-item .arrow {
+    font-size: 1.5rem;
+    color: var(--color-primary);
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.target-item:hover .arrow {
+    opacity: 1;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.modal-btn.secondary {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--color-text-muted);
+}
+
+.modal-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text-main);
+}
+
+.deploy-console {
+    background: #0d0d0d;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: #10b981;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-bottom: 1rem;
+}
+
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    color: var(--color-text-muted);
+    padding: 1rem;
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Deploy button accent */
+.deploy-btn {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+    border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.deploy-btn:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2));
+    border-color: rgba(16, 185, 129, 0.5) !important;
+}

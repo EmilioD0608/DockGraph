@@ -1,9 +1,12 @@
 import { Component, EventEmitter, Input, Output, signal, effect, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
-import { LucideAngularModule, X, Save, ChevronDown, Settings, HardDrive, Network, List, Cpu, Box, Plus } from 'lucide-angular';
+import { LucideAngularModule, X, Save, ChevronDown, Settings, HardDrive, Network, List, Cpu, Box, Plus, GitBranch } from 'lucide-angular';
 import { DockerNodeData } from '../../models/docker-node';
 import { LanguageService } from '../../services/language.service';
+import { EditorStore } from '../../store/editor.store';
+import { RepoStrategy } from '../../services/projects.service';
+import { CredentialsService, Credential } from '../../services/credentials.service';
 
 @Component({
     selector: 'app-node-editor',
@@ -20,19 +23,29 @@ export class NodeEditorComponent {
     @Output() close = new EventEmitter<void>();
     @Output() save = new EventEmitter<DockerNodeData>();
 
-    readonly icons: any = { close: X, save: Save, chevron: ChevronDown, settings: Settings, hardDrive: HardDrive, network: Network, list: List, cpu: Cpu, box: Box, plus: Plus };
+    readonly store = inject(EditorStore);
+    private credentialsService = inject(CredentialsService);
+    readonly icons: any = { close: X, save: Save, chevron: ChevronDown, settings: Settings, hardDrive: HardDrive, network: Network, list: List, cpu: Cpu, box: Box, plus: Plus, gitBranch: GitBranch };
+    RepoStrategy = RepoStrategy;
+    availableCredentials = signal<Credential[]>([]);
 
-    activeTab = signal<'general' | 'network' | 'storage' | 'env'>('general');
+    activeTab = signal<'general' | 'network' | 'storage' | 'env' | 'git'>('general');
 
-    tabs = computed<{ id: 'general' | 'network' | 'storage' | 'env', label: string, icon: any }[]>(() => {
+    tabs = computed<{ id: 'general' | 'network' | 'storage' | 'env' | 'git', label: string, icon: any }[]>(() => {
         const type = this.node?.type;
+        const isPolyrepo = this.store.project().repoStrategy === RepoStrategy.POLYREPO;
+
         if (type === 'service') {
-            return [
+            const t: any[] = [
                 { id: 'general', label: 'General', icon: this.icons.box },
                 { id: 'network', label: 'Red', icon: this.icons.network },
                 { id: 'storage', label: 'Datos', icon: this.icons.hardDrive },
                 { id: 'env', label: 'Entorno', icon: this.icons.list }
             ];
+            if (isPolyrepo) {
+                t.push({ id: 'git', label: 'Git', icon: this.icons.gitBranch });
+            }
+            return t;
         } else if (type === 'network') {
             return [
                 { id: 'general', label: 'Configuración', icon: this.icons.settings },
@@ -98,7 +111,12 @@ export class NodeEditorComponent {
             hcInterval: [''],
             hcTimeout: [''],
             hcRetries: [''],
-            hcStartPeriod: ['']
+            hcStartPeriod: [''],
+
+            // Git Config
+            gitRepoUrl: [''],
+            gitBranch: ['main'],
+            gitCredentialId: [undefined]
         });
 
         effect(() => {
@@ -129,7 +147,12 @@ export class NodeEditorComponent {
                     hcInterval: this.node.config.healthcheck?.interval || '',
                     hcTimeout: this.node.config.healthcheck?.timeout || '',
                     hcRetries: this.node.config.healthcheck?.retries || '',
-                    hcStartPeriod: this.node.config.healthcheck?.start_period || ''
+                    hcStartPeriod: this.node.config.healthcheck?.start_period || '',
+
+                    // Git
+                    gitRepoUrl: this.node.gitConfig?.repositoryUrl || '',
+                    gitBranch: this.node.gitConfig?.branch || 'main',
+                    gitCredentialId: this.node.gitConfig?.gitCredentialId
                 });
 
                 // Parse Ports
@@ -176,6 +199,17 @@ export class NodeEditorComponent {
     }
 
     // ... ngOnChanges ...
+    ngOnInit() {
+        this.loadCredentials();
+    }
+
+    loadCredentials() {
+        this.credentialsService.getAll().subscribe({
+            next: (creds) => this.availableCredentials.set(creds.filter(c => c.type === 'git')),
+            error: () => this.availableCredentials.set([])
+        });
+    }
+
     ngOnChanges() {
         if (this.node) {
             this.form.patchValue({
@@ -204,7 +238,11 @@ export class NodeEditorComponent {
                 hcInterval: this.node.config.healthcheck?.interval || '',
                 hcTimeout: this.node.config.healthcheck?.timeout || '',
                 hcRetries: this.node.config.healthcheck?.retries || '',
-                hcStartPeriod: this.node.config.healthcheck?.start_period || ''
+                hcStartPeriod: this.node.config.healthcheck?.start_period || '',
+
+                // Git
+                gitRepoUrl: this.node.gitConfig?.repositoryUrl || '',
+                gitBranch: this.node.gitConfig?.branch || 'main'
             });
 
             // Parse Ports
@@ -489,8 +527,22 @@ export class NodeEditorComponent {
         const updatedNode: DockerNodeData = {
             ...this.node,
             label: formVal.label,
-            config: newConfig
+            config: newConfig,
+            gitConfig: this.node.gitConfig // Preserve by default if not service
         };
+
+        // Git Config (Polyrepo Support)
+        if (this.node.type === 'service' && this.store.project().repoStrategy === RepoStrategy.POLYREPO) {
+            if (formVal.gitRepoUrl) {
+                updatedNode.gitConfig = {
+                    repositoryUrl: formVal.gitRepoUrl,
+                    branch: formVal.gitBranch || 'main',
+                    gitCredentialId: formVal.gitCredentialId || undefined
+                };
+            } else {
+                updatedNode.gitConfig = undefined;
+            }
+        }
 
         this.save.emit(updatedNode);
     }

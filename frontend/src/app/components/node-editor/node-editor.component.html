@@ -362,6 +362,41 @@
             </div>
         </div>
 
+        <div class="tab-pane" *ngIf="activeTab() === 'git'">
+            <div class="info-box" style="margin-bottom: 20px;">
+                <lucide-icon [img]="icons.gitBranch" size="16"></lucide-icon>
+                <p>Configura el repositorio específico para este servicio.</p>
+            </div>
+
+            <div class="form-group">
+                <label>Repositorio URL</label>
+                <input type="text" formControlName="gitRepoUrl" placeholder="https://github.com/org/service-repo.git">
+                <small style="color: #71717a; font-size: 0.75rem; margin-top: 4px; display: block;">
+                    ⚠️ Usa la URL <strong>HTTPS</strong>.
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label>Rama</label>
+                <input type="text" formControlName="gitBranch" placeholder="main">
+            </div>
+
+            <div class="form-group">
+                <label>Credencial Git (Opcional)</label>
+                <select formControlName="gitCredentialId"
+                    style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white;">
+                    <option [ngValue]="undefined">Ninguna (Público / SSH del Servidor)</option>
+                    <option *ngFor="let cred of availableCredentials()" [ngValue]="cred.id">
+                        {{ cred.name }} ({{ cred.username || 'Token' }})
+                    </option>
+                </select>
+                <small *ngIf="availableCredentials().length === 0" style="color: #71717a; font-size: 0.8rem;">
+                    No tienes credenciales Git. Crea una en Configuración → Credenciales.
+                </small>
+            </div>
+
+        </div>
+
     </form>
 
     <div class="editor-footer">

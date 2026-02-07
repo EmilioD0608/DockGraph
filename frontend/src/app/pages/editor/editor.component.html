@@ -26,6 +26,9 @@
             <button class="action-btn" (click)="openNewProjectWarning()" title="Nuevo Proyecto">
                 <lucide-icon [img]="icons.plus" [size]="20"></lucide-icon>
             </button>
+            <button class="action-btn deploy-btn" (click)="openDeployModal()" title="Desplegar a Servidor">
+                <lucide-icon [img]="icons.rocket" [size]="20"></lucide-icon>
+            </button>
 
             <button class="action-btn" (click)="toggleMenu()" aria-label="Toggle menu">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -40,6 +43,14 @@
                 <div class="menu-item" (click)="openImportModal()">
                     <lucide-icon [img]="icons.upload" [size]="18"></lucide-icon>
                     <span>Importar YAML</span>
+                </div>
+                <div class="menu-item" (click)="openSettingsModal()">
+                    <lucide-icon [img]="icons.settings" [size]="18"></lucide-icon>
+                    <span>Configuración Proyecto</span>
+                </div>
+                <div class="menu-item" (click)="goToTargets()">
+                    <lucide-icon [img]="icons.server" [size]="18"></lucide-icon>
+                    <span>Servidores de Despliegue</span>
                 </div>
                 <div class="separator" style="height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0;"></div>
                 <a href="https://github.com/your-repo" target="_blank" class="menu-item">
@@ -176,4 +187,147 @@
     <app-validation-dialog *ngIf="isValidationOpen()" [issues]="validationIssues()"
         (close)="isValidationOpen.set(false)" (export)="onConfirmExport()">
     </app-validation-dialog>
+
+    <!-- Deploy Modal -->
+    <div class="modal-overlay" *ngIf="isDeployModalOpen()" (click)="closeDeployModal()">
+        <div class="modal-content glass-panel deploy-modal" (click)="$event.stopPropagation()">
+            <h3>🚀 Desplegar Proyecto</h3>
+
+            <div *ngIf="!isDeploying() && !deployOutput()">
+                <!-- Git Config Note -->
+                <div *ngIf="store.project().repositoryUrl"
+                    style="margin-bottom: 1rem; background: rgba(1, 135, 144, 0.1); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(1, 135, 144, 0.3); display: flex; align-items: center; gap: 8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="#018790" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <span style="color: #a1a1aa; font-size: 0.85rem;">
+                        GitOps: <strong style="color: white;">{{ store.project().repositoryUrl }}</strong>
+                        ({{ store.project().branch || 'main' }})
+                    </span>
+                </div>
+                <div *ngIf="!store.project().repositoryUrl"
+                    style="margin-bottom: 1rem; background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; color: #71717a;">
+                    💡 Configura un repositorio Git en <strong style="color: #a1a1aa;">Menú → Configuración
+                        Proyecto</strong> para habilitar GitOps.
+                </div>
+
+                <p class="deploy-info">Selecciona un servidor para desplegar:</p>
+                <div class="targets-list">
+                    <div class="target-item" *ngFor="let target of deployTargets()" (click)="deployToTarget(target)">
+                        <div class="target-info">
+                            <strong>{{ target.name }}</strong>
+                            <span class="host">{{ target.username }}@{{ target.host }}</span>
+                        </div>
+                        <span class="arrow">→</span>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="modal-btn secondary" (click)="closeDeployModal()">Cancelar</button>
+                </div>
+            </div>
+
+            <div *ngIf="isDeploying() || deployOutput()">
+                <pre class="deploy-console">{{ deployOutput() }}</pre>
+                <div class="modal-actions" *ngIf="!isDeploying()">
+                    <button class="modal-btn" (click)="closeDeployModal()">Cerrar</button>
+                </div>
+                <div class="loading-indicator" *ngIf="isDeploying()">
+                    <span class="spinner"></span> Desplegando...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Settings Modal (Add this block) -->
+    <div class="modal-overlay" *ngIf="isSettingsOpen()">
+        <div class="modal-content glass-panel" style="width: 500px;">
+            <div class="modal-header">
+                <h3>Configuración del Proyecto</h3>
+                <button class="close-btn" (click)="isSettingsOpen.set(false)"
+                    style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">×</button>
+            </div>
+
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+                <!-- Strategy -->
+                <div class="form-group" style="margin-bottom: 0.5rem;">
+                    <label style="display:block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Estrategia
+                        de Repositorio</label>
+                    <div class="segment-control"
+                        style="background: rgba(0,0,0,0.3); padding: 4px; border-radius: 8px; display: flex; gap: 4px;">
+                        <button (click)="settingsRepoStrategy.set(RepoStrategy.MONOREPO)"
+                            [style.background]="settingsRepoStrategy() === RepoStrategy.MONOREPO ? 'rgba(255,255,255,0.1)' : 'transparent'"
+                            style="flex:1; border:none; color:white; padding: 8px; border-radius: 6px; cursor: pointer;">
+                            Monorepo
+                        </button>
+                        <button (click)="settingsRepoStrategy.set(RepoStrategy.POLYREPO)"
+                            [style.background]="settingsRepoStrategy() === RepoStrategy.POLYREPO ? 'rgba(255,255,255,0.1)' : 'transparent'"
+                            style="flex:1; border:none; color:white; padding: 8px; border-radius: 6px; cursor: pointer;">
+                            Multi-repo
+                        </button>
+                    </div>
+                </div>
+
+                <div *ngIf="settingsRepoStrategy() === RepoStrategy.MONOREPO"
+                    style="background: rgba(63, 255, 127, 0.05); border: 1px solid rgba(63, 255, 127, 0.2); padding: 10px; border-radius: 6px; font-size: 0.8rem; color: #a1a1aa;">
+                    Todos los servicios están en un solo repositorio. Define la URL aquí para que DockGraph lo clone y
+                    busque las carpetas de servicios dentro.
+                </div>
+
+                <div *ngIf="settingsRepoStrategy() === RepoStrategy.POLYREPO"
+                    style="background: rgba(255, 127, 63, 0.05); border: 1px solid rgba(255, 127, 63, 0.2); padding: 10px; border-radius: 6px; font-size: 0.8rem; color: #a1a1aa;">
+                    Cada servicio tiene su propio repositorio. Deberás configurar la URL Git en las propiedades de cada
+                    nodo individualmente.
+                </div>
+
+                <!-- Monorepo Config -->
+                <div *ngIf="settingsRepoStrategy() === RepoStrategy.MONOREPO"
+                    style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                    <div>
+                        <label
+                            style="display:block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Repositorio
+                            Git (URL)</label>
+                        <input type="text" [ngModel]="settingsRepoUrl()" (ngModelChange)="settingsRepoUrl.set($event)"
+                            placeholder="https://github.com/user/repo.git"
+                            style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white;">
+                        <small style="color: #71717a; font-size: 0.75rem; margin-top: 4px; display: block;">
+                            ⚠️ Usa la URL <strong>HTTPS</strong> de GitHub/GitLab.
+                        </small>
+                    </div>
+                    <div>
+                        <label
+                            style="display:block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Rama</label>
+                        <input type="text" [ngModel]="settingsBranch()" (ngModelChange)="settingsBranch.set($event)"
+                            placeholder="main"
+                            style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white;">
+                    </div>
+                </div>
+
+                <!-- Credential Selector -->
+                <div style="margin-top: 1rem;">
+                    <label style="display:block; margin-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;">Credencial
+                        (Opcional)</label>
+                    <select [ngModel]="settingsCredentialId()" (ngModelChange)="settingsCredentialId.set($event)"
+                        style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white;">
+                        <option [ngValue]="undefined">Ninguna (Público / SSH del Servidor)</option>
+                        <option *ngFor="let cred of availableCredentials()" [ngValue]="cred.id">
+                            {{ cred.name }} ({{ cred.username || 'Token' }})
+                        </option>
+                    </select>
+                    <small *ngIf="availableCredentials().length === 0" style="color: #71717a; font-size: 0.8rem;">
+                        No tienes credenciales Git. Crea una en Configuración → Credenciales.
+                    </small>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button class="modal-btn secondary" (click)="isSettingsOpen.set(false)"
+                    style="padding: 8px 16px; background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 6px; cursor: pointer;">Cancelar</button>
+                <button class="modal-btn primary" (click)="saveSettings()"
+                    style="padding: 8px 16px; background: #018790; border: none; color: white; border-radius: 6px; cursor: pointer;">Guardar</button>
+            </div>
+        </div>
+    </div>
 </div>

@@ -1,3 +1,20 @@
+/* Google Fonts Import - Same as Editor */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Quicksand:wght@500;700&display=swap');
+
+/* Design Tokens - Matching Editor Theme */
+:host {
+    --color-bg: #121214;
+    --color-surface: #1e1e20;
+    --color-primary: #018790;
+    --color-primary-glow: rgba(1, 135, 144, 0.4);
+    --color-secondary: #0a516d;
+    --color-text-main: #ffffff;
+    --color-text-muted: #a1a1aa;
+    --color-border: rgba(255, 255, 255, 0.08);
+    --font-heading: 'Quicksand', sans-serif;
+    --font-body: 'Inter', sans-serif;
+}
+
 /* Panel Container */
 .editor-panel {
     position: fixed;
@@ -5,16 +22,17 @@
     right: 0;
     width: 400px;
     height: 100dvh;
-    background: rgba(20, 20, 23, 0.95);
+    background: var(--color-surface);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
     z-index: 500;
     box-shadow: -10px 0 50px rgba(0, 0, 0, 0.6);
     animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    color: #e4e4e7;
+    color: var(--color-text-main);
+    font-family: var(--font-body);
 }
 
 @keyframes slideIn {
@@ -48,7 +66,8 @@
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
-    color: #fff;
+    font-family: var(--font-heading);
+    color: var(--color-text-main);
     letter-spacing: 0.5px;
 }
 
@@ -91,9 +110,9 @@
 }
 
 .tab-btn.active {
-    color: #06b6d4;
+    color: #018790;
     /* Cyan-500 */
-    background: rgba(6, 182, 212, 0.1);
+    background: rgba(1, 135, 144, 0.1);
 }
 
 .tab-label {
@@ -161,9 +180,9 @@ select {
 
 input:focus,
 select:focus {
-    border-color: #06b6d4;
+    border-color: #018790;
     background: rgba(0, 0, 0, 0.6);
-    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.15);
+    box-shadow: 0 0 0 2px rgba(1, 135, 144, 0.15);
 }
 
 .hint {
@@ -229,9 +248,9 @@ select:focus {
 }
 
 .checkbox-pill:has(input:checked) {
-    background: rgba(6, 182, 212, 0.15);
-    border-color: rgba(6, 182, 212, 0.4);
-    color: #06b6d4;
+    background: rgba(1, 135, 144, 0.15);
+    border-color: rgba(1, 135, 144, 0.4);
+    color: #018790;
 }
 
 /* List / Array Items */
@@ -347,11 +366,11 @@ select:focus {
     display: flex;
     gap: 10px;
     padding: 10px;
-    background: rgba(6, 182, 212, 0.05);
-    /* Cyan tint */
-    border: 1px solid rgba(6, 182, 212, 0.1);
+    background: rgba(1, 135, 144, 0.05);
+    /* Primary tint */
+    border: 1px solid rgba(1, 135, 144, 0.1);
     border-radius: 6px;
-    color: #a5f3fc;
+    color: #5eead4;
     font-size: 0.8rem;
     align-items: flex-start;
 }
@@ -369,14 +388,14 @@ select:focus {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    background: linear-gradient(135deg, #018790 0%, #0a516d 100%);
     color: white;
     border: none;
     padding: 0.75rem;
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+    box-shadow: 0 4px 12px rgba(1, 135, 144, 0.25);
     transition: all 0.2s;
     display: flex;
     align-items: center;
@@ -385,7 +404,7 @@ select:focus {
 }
 
 .btn-primary:hover {
-    box-shadow: 0 6px 16px rgba(6, 182, 212, 0.4);
+    box-shadow: 0 6px 16px rgba(1, 135, 144, 0.4);
     transform: translateY(-1px);
 }
 
@@ -472,7 +491,7 @@ select:focus {
 }
 
 .combo-item:hover {
-    background: rgba(6, 182, 212, 0.2);
+    background: rgba(1, 135, 144, 0.2);
     color: #fff;
 }
 

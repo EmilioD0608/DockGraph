@@ -3,6 +3,13 @@ import * as yaml from 'js-yaml';
 import { DockerNodeData, DockConnection } from '../models/docker-node';
 import { ComposeSpec, ServiceSpec, VolumeSpec, NetworkSpec, HealthcheckSpec } from '../models/docker-compose';
 
+export interface PolyRepoConfig {
+    folder: string;
+    repositoryUrl: string;
+    branch: string;
+    gitCredentialId?: number;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -20,11 +27,19 @@ export class YamlService {
     }
 
     /**
-     * Internal method to generate the YAML string.
+     * Internal method to generate the YAML string. (Legacy Wrapper)
      */
-    private generateYamlContent(nodes: DockerNodeData[], connections: DockConnection[]): string {
+    generateYamlContent(nodes: DockerNodeData[], connections: DockConnection[]): string {
+        return this.generateDeploymentArtifacts(nodes, connections).yaml;
+    }
+
+    /**
+     * Internal method to generate deployment artifacts (YAML + Git Map).
+     */
+    generateDeploymentArtifacts(nodes: DockerNodeData[], connections: DockConnection[]): { yaml: string, polyRepos: PolyRepoConfig[] } {
         const nodeNameMap = new Map<string, string>();
         const usedNames = new Set<string>();
+        const polyRepos: PolyRepoConfig[] = [];
 
         // Helper to generate unique name
         const getUniqueName = (baseName: string) => {
@@ -66,6 +81,37 @@ export class YamlService {
                     svc.build = typeof node.config.build === 'string' ? node.config.build : { ...node.config.build };
                 } else {
                     svc.image = node.config.image || 'nginx:latest';
+                }
+
+                // Git Config override (Polyrepo)
+                if (node.gitConfig?.repositoryUrl) {
+                    const repoFolder = `./${name}`;
+                    let originalContext = '.';
+
+                    if (node.config.build && typeof node.config.build !== 'string') {
+                        originalContext = node.config.build.context || '.';
+                    }
+
+                    // Clean context path
+                    if (originalContext.startsWith('./')) originalContext = originalContext.substring(2);
+                    if (originalContext === '.') originalContext = '';
+
+                    const newContext = originalContext ? `${repoFolder}/${originalContext}` : repoFolder;
+
+                    svc.build = {
+                        context: newContext,
+                        dockerfile: (typeof node.config.build !== 'string' && node.config.build?.dockerfile) || undefined
+                    };
+
+                    delete svc.image;
+
+                    // Git Map
+                    polyRepos.push({
+                        folder: name,
+                        repositoryUrl: node.gitConfig.repositoryUrl,
+                        branch: node.gitConfig.branch || 'main',
+                        gitCredentialId: node.gitConfig.gitCredentialId
+                    });
                 }
 
                 if (node.config.container_name) svc.container_name = node.config.container_name;
@@ -183,7 +229,7 @@ export class YamlService {
         if (Object.keys(compose.networks!).length === 0) delete compose.networks;
 
         // Dump with Custom Sorting
-        return yaml.dump(compose, {
+        const yamlStr = yaml.dump(compose, {
             lineWidth: -1,
             noRefs: true,
             sortKeys: (a, b) => {
@@ -197,6 +243,8 @@ export class YamlService {
                 return a.localeCompare(b);
             }
         });
+
+        return { yaml: yamlStr, polyRepos };
     }
 
     /**

@@ -1,0 +1,247 @@
+<div class="page-container">
+    <header class="glass-banner">
+        <div class="logo" (click)="goBack()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m12 19-7-7 7-7" />
+                <path d="M19 12H5" />
+            </svg>
+            Volver al Editor
+        </div>
+        <div class="actions">
+            <h2>Configuración</h2>
+        </div>
+    </header>
+
+    <main class="content-area">
+        <div class="container">
+            <!-- Tabs -->
+            <div class="tabs-container" style="display: flex; gap: 8px; margin-bottom: 1.5rem;">
+                <button class="tab-btn" [class.active]="activeTab() === 'servers'" (click)="activeTab.set('servers')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="20" height="8" x="2" y="2" rx="2" ry="2" />
+                        <rect width="20" height="8" x="2" y="14" rx="2" ry="2" />
+                        <line x1="6" x2="6.01" y1="6" y2="6" />
+                        <line x1="6" x2="6.01" y1="18" y2="18" />
+                    </svg>
+                    Servidores
+                </button>
+                <button class="tab-btn" [class.active]="activeTab() === 'credentials'"
+                    (click)="activeTab.set('credentials')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778m0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+                    </svg>
+                    Credenciales Git
+                </button>
+            </div>
+
+            <!-- ====== SERVERS TAB ====== -->
+            <div *ngIf="activeTab() === 'servers'">
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <span class="toolbar-title" *ngIf="targets().length > 0">
+                        {{ targets().length }} servidor{{ targets().length !== 1 ? 'es' : '' }}
+                    </span>
+                    <button class="cta-button" (click)="showForm.set(!showForm())">
+                        <span *ngIf="!showForm()">+ Añadir Servidor</span>
+                        <span *ngIf="showForm()">Cancelar</span>
+                    </button>
+                </div>
+
+                <!-- Create Form -->
+                <div class="glass-panel form-panel" *ngIf="showForm()">
+                    <h3>Nuevo Servidor SSH</h3>
+                    <form [formGroup]="form" (ngSubmit)="saveTarget()">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Nombre Amigable</label>
+                                <input formControlName="name" placeholder="Ej: Producción AWS">
+                            </div>
+                            <div class="form-group">
+                                <label>Host / IP</label>
+                                <input formControlName="host" placeholder="192.168.1.100">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Usuario SSH</label>
+                                <input formControlName="username" placeholder="root">
+                            </div>
+                            <div class="form-group small">
+                                <label>Puerto</label>
+                                <input type="number" formControlName="port" placeholder="22">
+                            </div>
+                        </div>
+
+                        <div class="separator"></div>
+                        <p class="crypto-note">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                            </svg>
+                            Las credenciales se envían encriptadas con AES-256.
+                        </p>
+
+                        <div class="form-group">
+                            <label>Contraseña (Opción A)</label>
+                            <input type="password" formControlName="password" placeholder="••••••••">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Clave Privada SSH (Opción B)</label>
+                            <textarea formControlName="privateKey" rows="4" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----
+...
+-----END OPENSSH PRIVATE KEY-----"></textarea>
+                        </div>
+
+                        <button type="submit" class="cta-button full-width" [disabled]="form.invalid || isLoading()">
+                            {{ isLoading() ? 'Guardando...' : 'Guardar Servidor' }}
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Target List -->
+                <div class="targets-grid">
+                    <div class="card" *ngFor="let target of targets()">
+                        <div class="card-header">
+                            <div class="status-indicator" [class.online]="target.status === 'online'"></div>
+                            <h4>{{ target.name }}</h4>
+                        </div>
+                        <span class="host-badge">{{ target.username }}&#64;{{ target.host }}:{{ target.port || 22
+                            }}</span>
+
+                        <div class="card-actions">
+                            <button class="action-btn delete"
+                                (click)="deleteTarget(target.id); $event.stopPropagation()">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M3 6h18" />
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                </svg>
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="empty-state" *ngIf="targets().length === 0 && !isLoading() && !showForm()">
+                        <p>No tienes servidores configurados.</p>
+                        <p style="font-size: 0.9rem; opacity: 0.7;">Añade uno para empezar a desplegar tus proyectos
+                            remotamente.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== CREDENTIALS TAB ====== -->
+            <div *ngIf="activeTab() === 'credentials'">
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <span class="toolbar-title" *ngIf="credentials().length > 0">
+                        {{ credentials().length }} credencial{{ credentials().length !== 1 ? 'es' : '' }}
+                    </span>
+                    <button class="cta-button" (click)="showCredForm.set(!showCredForm())">
+                        <span *ngIf="!showCredForm()">+ Añadir Credencial</span>
+                        <span *ngIf="showCredForm()">Cancelar</span>
+                    </button>
+                </div>
+
+                <!-- Create Credential Form -->
+                <div class="glass-panel form-panel" *ngIf="showCredForm()">
+                    <h3>Nueva Credencial Git</h3>
+                    <form [formGroup]="credForm" (ngSubmit)="saveCredential()">
+                        <div class="form-group">
+                            <label>Nombre</label>
+                            <input formControlName="name" placeholder="Ej: GitHub Personal Token">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Tipo</label>
+                                <select formControlName="type"
+                                    style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white;">
+                                    <option value="git">Git (GitHub, GitLab, etc.)</option>
+                                    <option value="docker-registry">Docker Registry</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Usuario (Opcional)</label>
+                                <input formControlName="username" placeholder="x-access-token">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="display: flex; justify-content: space-between; align-items: center;">
+                                Token / Secret
+                                <div class="help-links" style="font-size: 0.75rem;">
+                                    <a href="https://github.com/settings/tokens/new?scopes=repo&description=DockGraph"
+                                        target="_blank" style="color: #018790; text-decoration: none;">+ Generar en
+                                        GitHub</a>
+                                    <span style="margin: 0 4px; color: #3f3f46;">|</span>
+                                    <a href="https://gitlab.com/-/profile/personal_access_tokens?name=DockGraph&scopes=read_repository"
+                                        target="_blank" style="color: #018790; text-decoration: none;">+ Generar en
+                                        GitLab</a>
+                                </div>
+                            </label>
+                            <input type="password" formControlName="secret" placeholder="ghp_xxxxxxxxxxxx">
+                            <small style="color: #71717a; font-size: 0.8rem;">
+                                💡 <strong>GitHub:</strong> Necesitas el permiso <code>repo</code>.<br>
+                                💡 <strong>GitLab:</strong> Necesitas <code>read_repository</code>.
+                            </small>
+                        </div>
+
+                        <button type="submit" class="cta-button full-width"
+                            [disabled]="credForm.invalid || isLoading()">
+                            {{ isLoading() ? 'Guardando...' : 'Guardar Credencial' }}
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Credentials List -->
+                <div class="targets-grid">
+                    <div class="card" *ngFor="let cred of credentials()">
+                        <div class="card-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="#018790" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path
+                                    d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778m0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+                            </svg>
+                            <h4>{{ cred.name }}</h4>
+                        </div>
+                        <span class="host-badge">{{ cred.type }} {{ cred.username ? '(' + cred.username + ')' : ''
+                            }}</span>
+
+                        <div class="card-actions">
+                            <button class="action-btn delete"
+                                (click)="deleteCredential(cred.id); $event.stopPropagation()">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M3 6h18" />
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                </svg>
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="empty-state" *ngIf="credentials().length === 0 && !isLoading() && !showCredForm()">
+                        <p>No tienes credenciales configuradas.</p>
+                        <p style="font-size: 0.9rem; opacity: 0.7;">Añade tokens de Git para clonar repositorios
+                            privados
+                            durante el despliegue.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>

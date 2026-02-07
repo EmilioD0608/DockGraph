@@ -4,11 +4,19 @@ import { DockerNodeData, DockConnection } from '../models/docker-node';
 import { computed, effect, inject } from '@angular/core';
 import { LayoutService } from '../services/layout.service';
 
+import { RepoStrategy } from '../services/projects.service';
+
 export interface ProjectMetaData {
     name: string;
     tech: string;
     id?: number;
     uuid?: string;
+
+    // Git Ops
+    repoStrategy?: RepoStrategy;
+    repositoryUrl?: string;
+    branch?: string;
+    gitCredentialId?: number;
 }
 
 export interface EditorState {

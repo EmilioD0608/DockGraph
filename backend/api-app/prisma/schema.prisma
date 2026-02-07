@@ -10,12 +10,19 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  uuid      String   @unique @default(uuid())
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  projects  Project[]
+  id          Int          @id @default(autoincrement())
+  uuid        String       @unique @default(uuid())
+  email       String       @unique
+  password    String
+  createdAt   DateTime     @default(now())
+  projects    Project[]
+  targets     Target[]
+  credentials Credential[]
+}
+
+enum RepoStrategy {
+  MONOREPO
+  POLYREPO
 }
 
 model Project {
@@ -24,9 +31,18 @@ model Project {
   name      String
   data      Json
   createdAt DateTime @default(now())
-  
-  user      User?    @relation(fields: [userId], references: [id])
-  userId    Int?
+
+  user   User? @relation(fields: [userId], references: [id])
+  userId Int?
+
+  // Git Integration
+  repoStrategy  RepoStrategy @default(MONOREPO)
+  repositoryUrl String?
+  branch        String?      @default("main")
+
+  // Credenciales Git (Global para Monorepo)
+  gitCredential   Credential? @relation(fields: [gitCredentialId], references: [id])
+  gitCredentialId Int?
 }
 
 model Template {
@@ -38,4 +54,48 @@ model Template {
   config      Json
   isPublic    Boolean  @default(true)
   createdAt   DateTime @default(now())
+}
+
+// Fase 3: Orchestration & GitOps
+
+model Target {
+  id   Int    @id @default(autoincrement())
+  uuid String @unique @default(uuid())
+  name String
+
+  // Connection details
+  host     String
+  port     Int    @default(22)
+  username String
+
+  // Encrypted Secrets (Managed by EncryptionService)
+  encryptedPrivateKey String? // For Key-based auth
+  encryptedPassword   String? // For Password-based auth
+
+  isAgentInstalled Boolean @default(false)
+  status           String  @default("unknown") // online, offline, error
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+}
+
+model Credential {
+  id   Int    @id @default(autoincrement())
+  uuid String @unique @default(uuid())
+  name String // e.g., "My GitHub Token"
+  type String // git, docker-registry
+
+  username String? // e.g., "git-user"
+
+  // Encrypted Secret (Managed by EncryptionService)
+  encryptedSecret String
+
+  createdAt DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id])
+  userId   Int
+  projects Project[]
 }

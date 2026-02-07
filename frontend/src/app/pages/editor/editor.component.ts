@@ -1,7 +1,7 @@
 import { Component, signal, HostListener, ViewChild, effect, computed, ElementRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, Download, Upload, Plus, Save, Network, Undo, Redo } from 'lucide-angular';
+import { LucideAngularModule, Download, Upload, Plus, Save, Network, Undo, Redo, Rocket, Server, Settings } from 'lucide-angular';
 import { Router } from '@angular/router';
 import * as yaml from 'js-yaml';
 
@@ -13,10 +13,13 @@ import { DockerNodeData, DockConnection, Socket } from '../../models/docker-node
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { YamlService } from '../../services/yaml.service';
 import { ValidationService, ValidationIssue } from '../../services/validation.service';
-import { ProjectsService, Project } from '../../services/projects.service';
+import { ProjectsService, Project, RepoStrategy } from '../../services/projects.service';
 import { AuthService } from '../../services/auth.service';
 import { EditorStore } from '../../store/editor.store';
 import { ValidationDialogComponent } from '../../components/validation-dialog/validation-dialog.component';
+import { TargetService, Target } from '../../services/target.service';
+import { OrchestratorService, DeployResponse } from '../../services/orchestrator.service';
+import { CredentialsService, Credential } from '../../services/credentials.service';
 
 @Component({
     selector: 'app-editor',
@@ -29,7 +32,7 @@ export class EditorComponent implements OnInit {
     @ViewChild(CanvasComponent) canvasRef!: CanvasComponent;
 
     readonly store = inject(EditorStore);
-    readonly icons = { download: Download, upload: Upload, plus: Plus, save: Save, network: Network, undo: Undo, redo: Redo };
+    readonly icons = { download: Download, upload: Upload, plus: Plus, save: Save, network: Network, undo: Undo, redo: Redo, rocket: Rocket, server: Server, settings: Settings };
 
     isMenuOpen = signal(false);
     isImportModalOpen = signal(false);
@@ -50,12 +53,32 @@ export class EditorComponent implements OnInit {
     // Auth State
     userProjects = signal<Project[]>([]);
 
+    // Deploy State
+    isDeployModalOpen = signal(false);
+    deployTargets = signal<Target[]>([]);
+    isDeploying = signal(false);
+    deployOutput = signal<string>('');
+    deployGitRepo = signal<string>(''); // Legacy/Override
+    deployGitBranch = signal<string>('main');
+
+    // Project Settings State
+    isSettingsOpen = signal(false);
+    settingsRepoStrategy = signal<RepoStrategy>(RepoStrategy.MONOREPO);
+    settingsRepoUrl = signal('');
+    settingsBranch = signal('main');
+    settingsCredentialId = signal<number | undefined>(undefined);
+    availableCredentials = signal<Credential[]>([]);
+    RepoStrategy = RepoStrategy; // Expose enum to template
+
     constructor(
         private yamlService: YamlService,
         private validationService: ValidationService,
         private projectsService: ProjectsService,
         public authService: AuthService,
-        private router: Router
+        private router: Router,
+        private targetService: TargetService,
+        private orchestratorService: OrchestratorService,
+        private credentialsService: CredentialsService
     ) {
         // Watch user changes to load projects
         effect(() => {
@@ -74,6 +97,10 @@ export class EditorComponent implements OnInit {
         if (!this.store.project().name) {
             this.isProjectModalOpen.set(true);
         }
+    }
+
+    goToTargets() {
+        this.router.navigate(['/targets']);
     }
 
     loadUserProjects() {
@@ -97,13 +124,57 @@ export class EditorComponent implements OnInit {
             name: p.name,
             tech: 'docker-compose',
             id: p.id,
-            uuid: p.uuid
+            uuid: p.uuid,
+            repoStrategy: p.repoStrategy,
+            repositoryUrl: p.repositoryUrl,
+            branch: p.branch,
+            gitCredentialId: p.gitCredentialId
         };
 
         this.store.loadProject({ nodes, connections, meta });
     }
 
     // Project System Methods
+
+    // Project Settings
+    openSettingsModal() {
+        const meta = this.store.project();
+        this.settingsRepoStrategy.set(meta.repoStrategy || RepoStrategy.MONOREPO);
+        this.settingsRepoUrl.set(meta.repositoryUrl || '');
+        this.settingsBranch.set(meta.branch || 'main');
+        this.settingsCredentialId.set(meta.gitCredentialId || undefined);
+        this.isSettingsOpen.set(true);
+        this.isMenuOpen.set(false);
+
+        // Load available credentials
+        this.credentialsService.getAll().subscribe({
+            next: (creds) => this.availableCredentials.set(creds.filter(c => c.type === 'git')),
+            error: () => this.availableCredentials.set([])
+        });
+    }
+
+    saveSettings() {
+        const projectId = this.store.project().id;
+        const payload = {
+            repoStrategy: this.settingsRepoStrategy(),
+            repositoryUrl: this.settingsRepoUrl(),
+            branch: this.settingsBranch(),
+            gitCredentialId: this.settingsCredentialId() || undefined
+        };
+
+        if (projectId) {
+            this.projectsService.update(projectId, payload).subscribe({
+                next: (res) => {
+                    this.store.updateProjectMeta({ ...res });
+                    this.isSettingsOpen.set(false);
+                },
+                error: (e) => alert('Error saving settings')
+            });
+        } else {
+            this.store.updateProjectMeta(payload);
+            this.isSettingsOpen.set(false);
+        }
+    }
 
     saveProject() {
         if (!this.authService.currentUser()) {
@@ -116,9 +187,14 @@ export class EditorComponent implements OnInit {
             connections: this.store.connections()
         };
 
+        const meta = this.store.project();
         const projectPayload = {
-            name: this.store.project().name || 'Untitled Project',
-            data: currentData
+            name: meta.name || 'Untitled Project',
+            data: currentData,
+            repoStrategy: meta.repoStrategy,
+            repositoryUrl: meta.repositoryUrl,
+            branch: meta.branch,
+            gitCredentialId: meta.gitCredentialId
         };
 
         const projectId = this.store.project().id;
@@ -860,6 +936,83 @@ export class EditorComponent implements OnInit {
             this.store.project().name || 'dockgraph-project'
         );
         this.isValidationOpen.set(false);
+    }
+
+    // ==================== Deploy Methods ====================
+
+    openDeployModal() {
+        if (!this.authService.currentUser()) {
+            alert('Debes iniciar sesión para desplegar.');
+            return;
+        }
+
+        // Validate first
+        const issues = this.validationService.validateGraph(this.store.nodes(), this.store.connections());
+        const hasBlockers = issues.some((i: ValidationIssue) => i.type === 'error');
+        if (hasBlockers) {
+            alert('Corrige los errores de validación antes de desplegar.');
+            this.validationIssues.set(issues);
+            this.isValidationOpen.set(true);
+            return;
+        }
+
+        // Pre-load Git Config if Monorepo
+        const meta = this.store.project();
+        if (meta.repoStrategy === RepoStrategy.MONOREPO && meta.repositoryUrl) {
+            this.deployGitRepo.set(meta.repositoryUrl);
+            this.deployGitBranch.set(meta.branch || 'main');
+        }
+
+        // Load targets
+        this.targetService.findAll().subscribe({
+            next: (targets) => {
+                if (targets.length === 0) {
+                    alert('No tienes servidores configurados. Ve a /targets para añadir uno.');
+                    this.router.navigate(['/targets']);
+                    return;
+                }
+                this.deployTargets.set(targets);
+                this.isDeployModalOpen.set(true);
+                this.deployOutput.set('');
+            },
+            error: (err) => alert('Error cargando servidores: ' + err.message)
+        });
+    }
+
+    closeDeployModal() {
+        this.isDeployModalOpen.set(false);
+        this.isDeploying.set(false);
+    }
+
+    deployToTarget(target: Target) {
+        this.isDeploying.set(true);
+        this.deployOutput.set('🚀 Iniciando despliegue en ' + target.name + '...\n');
+
+        // Generate Artifacts (YAML + PolyRepo Config)
+        const artifacts = this.yamlService.generateDeploymentArtifacts(this.store.nodes(), this.store.connections());
+        const projectId = this.store.project().uuid || 'temp-' + Date.now();
+
+        this.orchestratorService.deploy({
+            targetId: target.id,
+            projectId: projectId,
+            yamlContent: artifacts.yaml,
+            repositoryUrl: this.deployGitRepo() || this.store.project().repositoryUrl || undefined,
+            branch: this.deployGitBranch() || this.store.project().branch || undefined,
+            polyRepos: artifacts.polyRepos.length > 0 ? artifacts.polyRepos : undefined,
+            gitCredentialId: this.store.project().gitCredentialId
+        }).subscribe({
+            next: (response) => {
+                this.deployOutput.update(o => o + '\n✅ ' + response.status.toUpperCase() + '\n\n--- Salida del servidor ---\n' + response.output);
+                if (response.error) {
+                    this.deployOutput.update(o => o + '\n--- Errores ---\n' + response.error);
+                }
+                this.isDeploying.set(false);
+            },
+            error: (err) => {
+                this.deployOutput.update(o => o + '\n❌ ERROR: ' + (err.error?.message || err.message));
+                this.isDeploying.set(false);
+            }
+        });
     }
 
 }
